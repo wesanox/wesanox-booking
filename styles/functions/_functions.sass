@@ -1,0 +1,3 @@
+@function font-calc($size, $sizeResponsive)
+  $newSize: calc(#{$sizeResponsive}px + (#{$size} - #{$sizeResponsive}) * ((100vw - 300px) / (1920 - 300)))
+  @return $newSize

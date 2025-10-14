@@ -1,0 +1,162 @@
+/** ---- width ---- **/
+.w
+  &-100
+    width: 100%
+
+
+  &-50
+    width: 50%
+
+/** ---- displays ---- **/
+.d
+  &-flex
+    display: flex
+
+  &-none
+    display: none
+
+/** ---- flex sub classes ---- */
+.justify-content
+  &-center
+    justify-content: center
+
+  &-between
+    justify-content: space-between
+
+  &-end
+    justify-content: flex-end
+
+.flex
+  &-column
+    flex-direction: column
+
+  &-wrap
+    flex-wrap: wrap
+
+.align-items
+  &-center
+    align-items: center
+
+/** ---- Gaps ---- **/
+.gap
+  &-1
+    gap: 1rem
+
+  &-2
+    gap: 2rem
+
+/** ---- Margins ---- */
+.m
+  &t
+    &-1
+      margin-top: 1rem!important
+
+    &-2
+      margin-top: 2rem!important
+
+  &b
+    &-1
+      margin-bottom: 1rem!important
+
+    &-2
+      margin-bottom: 2rem!important
+
+  &y
+    &-1
+      margin: 1rem 0!important
+
+    &-2
+      margin: 2rem 0!important
+
+.text
+  &-center
+    text-align: center
+
+  &-bolder
+    font-weight: bold
+
+/** ---- input controls ---- **/
+input[type="radio"]
+  &.form-radio
+    -moz-appearance: none
+    -webkit-appearance: none
+    appearance: none
+
+    position: relative
+    width: 1.5rem
+    height: 1.5rem
+    margin-right: 1rem
+    cursor: pointer
+    background-color: white
+    border: 2px solid $primary-color
+    border-radius: 50%
+    display: flex
+    align-items: center
+    justify-content: center
+
+    &:focus
+      outline: none
+      outline-style: initial
+
+    &:checked
+      background-color: rgba($secondary-color, .5)
+
+      &:after
+        content: ''
+        position: absolute
+        left: 0
+        top: 0
+        display: inline-block
+        width: 1.2rem
+        height: 1.2rem
+        background: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-check" viewBox="0 0 16 16"><path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425z"/></svg>') no-repeat center
+        background-size: 100%
+
+select
+  &.form-select
+    -moz-appearance: none
+    -webkit-appearance: none
+    appearance: none
+
+    text-align: center
+    border: 2px solid $primary-color
+    padding: 0.5rem 1rem
+    font-size: font-calc(18, 24)
+
+    &:focus
+      outline: none
+      outline-style: initial
+
+    &:hover
+      cursor: pointer
+
+.form
+  &-select
+    &-container
+      position: relative
+
+      &:after
+        opacity: 0
+        content: '+'
+        position: absolute
+        right: 1rem
+        top: 50%
+        transform: translateY(-50%)
+        transition: 0.2s all
+        color: $primary-color
+
+      &:hover
+        &:after
+          opacity: 1
+
+.form
+  &-text
+    box-sizing: border-box
+    font-size: font-calc(18, 24)
+    line-height: font-calc(24, 30)
+    padding: 0.5rem 1rem
+    border: 2px solid $primary-color
+
+    &:focus
+      outline: none
+      outline-style: initial
