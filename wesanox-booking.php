@@ -7,7 +7,7 @@
  *
  * @wordpress-plugin
  * Plugin Name: Wesanox Booking Plugin
- * Version:     0.1
+ * Version:     0.2
  * Plugin URI:  https://wesanox.de
  * Description: Booking tool for Spa and Wellness bookings
  * Author:      Frittenfritze
