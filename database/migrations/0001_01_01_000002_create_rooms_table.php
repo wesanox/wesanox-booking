@@ -12,10 +12,10 @@ function create_wesanox_rooms_table()
         id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
         
         room_name VARCHAR(255) NOT NULL,
-        room_inactive TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
-        room_inactiv_from TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
-        room_inactiv_to TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
-        room_inactiv_note TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+        room_inactive TINYINT(1) UNSIGNED DEFAULT NULL,
+        room_inactiv_from DATE DEFAULT NULL,
+        room_inactiv_to DATE DEFAULT NULL,
+        room_inactiv_note LONGTEXT DEFAULT NULL,
         
         area_id BIGINT(20) UNSIGNED NULL,
         roomart_id BIGINT(20) UNSIGNED NULL,

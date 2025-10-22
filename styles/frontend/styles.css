@@ -1,0 +1,783 @@
+@charset "UTF-8";
+/** @TODO framework intregieren */
+/** ---- Import Variables ---- **/
+/**--------  Main colors  --------**/
+/**-------- Media Query´s --------**/
+/** ---- Import Elements ---- **/
+#element-booking-persons input[type=checkbox] {
+  display: none;
+}
+#element-booking-persons label {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 25px;
+  height: 35px;
+  color: #1C3F5E;
+  background-color: white;
+  border-radius: 0;
+  cursor: pointer;
+}
+#element-booking-persons label.active {
+  background-color: #1C3F5E;
+  color: white;
+}
+
+#wesanox-booking span.available {
+  display: block;
+  border-radius: 5px;
+  height: 10px;
+  width: 10px;
+  background: green;
+}
+#wesanox-booking span.fully-booked {
+  display: block;
+  border-radius: 5px;
+  height: 10px;
+  width: 10px;
+  background: red;
+}
+#wesanox-booking span.middle {
+  display: block;
+  border-radius: 5px;
+  height: 10px;
+  width: 10px;
+  background: darkorange;
+}
+#wesanox-booking #wesanox-booking-calendar {
+  min-height: 350px;
+  width: 100%;
+}
+#wesanox-booking table {
+  background-color: white;
+}
+#wesanox-booking table th {
+  padding: 5px 0 25px;
+  border-color: transparent !important;
+}
+#wesanox-booking table td {
+  padding: 5px 0 25px;
+  border-color: transparent !important;
+}
+#wesanox-booking table td.zabuto-calendar__navigation__item--header {
+  vertical-align: middle;
+  background-color: #1C3F5E;
+  color: white;
+  padding: 5px 0;
+}
+#wesanox-booking table td.zabuto-calendar__navigation__item--prev {
+  vertical-align: middle;
+  background-color: #1C3F5E;
+  color: white;
+  padding: 5px 0;
+}
+#wesanox-booking table td.zabuto-calendar__navigation__item--prev .prev:after {
+  content: "<";
+  font-size: 20px;
+}
+#wesanox-booking table td.zabuto-calendar__navigation__item--next {
+  vertical-align: middle;
+  background-color: #1C3F5E;
+  color: white;
+  padding: 5px 0;
+}
+#wesanox-booking table td.zabuto-calendar__navigation__item--next .next:after {
+  content: ">";
+  font-size: 20px;
+}
+#wesanox-booking table td.zabuto-calendar__day {
+  position: relative;
+  width: 40px;
+}
+#wesanox-booking table td.zabuto-calendar__day:after {
+  content: "";
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 10px;
+  width: 10px;
+  border-radius: 5px;
+  background: transparent;
+  transition: all 0.3s;
+  z-index: 1;
+}
+#wesanox-booking table td.zabuto-calendar__day.fully-booked:after {
+  background: red;
+}
+#wesanox-booking table td.zabuto-calendar__day--today {
+  position: relative;
+  width: 40px;
+}
+#wesanox-booking table td.zabuto-calendar__day--today:after {
+  content: "";
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 10px;
+  width: 10px;
+  border-radius: 5px;
+  background: transparent;
+  transition: all 0.3s;
+  z-index: 1;
+}
+#wesanox-booking table td.zabuto-calendar__day--today.fully-booked::after {
+  background: red;
+}
+#wesanox-booking table td.zabuto-calendar__day--empty {
+  width: 40px;
+}
+#wesanox-booking table td.zabuto-calendar__day.active, #wesanox-booking table td.zabuto-calendar__day--today.active {
+  background-color: #1C3F5E !important;
+  color: white !important;
+}
+#wesanox-booking table td.zabuto-calendar__day.middle:after, #wesanox-booking table td.zabuto-calendar__day--today.middle:after {
+  background: darkorange;
+}
+#wesanox-booking table td.zabuto-calendar__day.middle:hover, #wesanox-booking table td.zabuto-calendar__day--today.middle:hover {
+  background-color: #1C3F5E !important;
+  color: white !important;
+  cursor: pointer;
+}
+#wesanox-booking table td.zabuto-calendar__day.available::after, #wesanox-booking table td.zabuto-calendar__day--today.available::after {
+  background: green;
+}
+#wesanox-booking table td.zabuto-calendar__day.available:hover, #wesanox-booking table td.zabuto-calendar__day--today.available:hover {
+  background-color: #1C3F5E !important;
+  color: white !important;
+  cursor: pointer;
+}
+
+#element-booking-time .time-box {
+  background: #efefef;
+  transition: all 0.2s ease-in-out;
+}
+#element-booking-time .time-box:hover, #element-booking-time .time-box.active {
+  background-color: #1C3F5E;
+  color: white;
+  cursor: pointer;
+}
+
+#wesanox-booking #variation_message_1, #wesanox-booking #variation_message_2 {
+  background-color: rgba(28, 63, 94, 0.8);
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/** ---- Button Style ---- **/
+.btn-primary {
+  background-color: #1C3F5E !important;
+  border-color: #1C3F5E !important;
+  color: white !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-weight: 300 !important;
+  text-transform: uppercase !important;
+  text-decoration: none !important;
+}
+.btn-primary:focus, .btn-primary:active, .btn-primary:focus-visible {
+  background-color: #1C3F5E !important;
+  border-color: #1C3F5E !important;
+  color: white !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-weight: 300 !important;
+  text-transform: uppercase !important;
+}
+.btn-primary:hover {
+  background-color: white !important;
+  color: #1C3F5E !important;
+}
+.btn-primary.forward {
+  padding: 3px 12px 3px 20px !important;
+}
+.btn-primary.forward span {
+  font-size: 20px;
+  padding-left: 10px;
+}
+.btn-primary.back {
+  padding: 3px 20px 3px 12px !important;
+}
+.btn-primary.back span {
+  font-size: 20px;
+  padding-right: 10px;
+}
+.btn-primary-outline:hover {
+  background-color: #1C3F5E !important;
+  color: white !important;
+}
+
+.components-button, .components-button:focus, .components-button:active, .components-button:focus-visible {
+  background-color: #1C3F5E !important;
+  border-color: #1C3F5E !important;
+  color: white !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-weight: 300 !important;
+  text-transform: uppercase !important;
+}
+.components-button:hover {
+  background-color: white !important;
+  color: #1C3F5E !important;
+}
+
+.delete-cart-link {
+  color: #1C3F5E;
+  cursor: pointer;
+}
+.delete-cart-link:hover {
+  color: #ff253a;
+}
+
+/** ---- main styles ---- **/    
+.get-product_id {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.col-12 img.attachment-woocommerce_thumbnail {
+  width: 100%;
+}
+@media only screen and (max-width: 576px) {
+  .col-12 img.attachment-woocommerce_thumbnail {
+    width: 50%;
+  }
+}
+
+/** ---- Text styles ---- **/   
+.text-blue {
+  color: #1C3F5E;
+}
+
+/** ---- WooCommerce styles ---- **/    
+.woocommerce-message {
+  position: absolute !important;
+  top: 0;
+  z-index: 1000;
+  width: 100% !important;
+}
+.woocommerce-notices-wrapper .woocommerce-message {
+  margin-bottom: 0;
+}
+
+#cart-segment .woocommerce button.button,
+#cart-segment .woocommerce button.button.alt {
+  border-radius: 0 !important;
+  min-height: 37px;
+}
+
+:where(body:not(.woocommerce-block-theme-has-button-styles)) .woocommerce a.button.alt {
+  background-color: #1C3F5E !important;
+  border: 1px solid #1C3F5E !important;
+  color: white !important;
+  border-radius: 0 !important;
+  transition: 0.2s;
+}
+
+:where(body:not(.woocommerce-block-theme-has-button-styles)) .woocommerce a.button.alt:hover {
+  background-color: white !important;
+  color: #1C3F5E !important;
+}
+
+#wesanox-booking_cart .coupon {
+  width: 48% !important;
+}
+
+#wesanox-booking_cart .coupon #coupon_code {
+  width: 49.5% !important;
+  border-radius: 0 !important;
+}
+
+#wesanox-booking_cart .coupon button {
+  font-size: 1rem !important;
+  min-height: 42px !important;
+  border: 1px solid #1C3F5E !important;
+  width: 49.5% !important;
+}
+
+@media only screen and (max-width: 1024px) {
+  #wesanox-booking_cart .coupon #coupon_code,
+  #wesanox-booking_cart .coupon button {
+    width: 100% !important;
+  }
+  #cart-segment .coupon button {
+    margin-top: 10px;
+    margin-bottom: 30px;
+  }
+}
+@media only screen and (max-width: 992px) {
+  #wesanox-booking_cart .coupon {
+    width: 98% !important;
+  }
+}
+#cart-segment .quantity input[type=number] {
+  min-width: 75px;
+  padding-left: 5px;
+  padding-right: 0;
+}
+
+#cart-upsell-box {
+  background: rgba(255, 255, 255, 0.8);
+  padding: 60px;
+}
+
+@media only screen and (max-width: 576px) {
+  #cart-upsell-box {
+    padding: 30px;
+  }
+}
+#cart-upsell-box h2.text-blue {
+  color: #1C3F5E;
+  font-weight: 400;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+#cart-upsell-box .checkbox-extras {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  background: #efefef;
+  border: 1px solid #afafaf;
+}
+
+#cart-upsell-box .checkbox-extras svg {
+  display: none;
+}
+
+#cart-upsell-box .checkbox-extras.active {
+  background: #1C3F5E;
+  border-color: #D9B341;
+}
+
+#cart-upsell-box .checkbox-extras.active svg {
+  display: block;
+  position: absolute;
+  color: #D9B341;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#wesanox-booking {
+  min-height: 50vh;
+  font-weight: 300 !important;
+}
+
+#wesanox-booking .timer-box {
+  background: #1C3F5E;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 0;
+}
+
+#wesanox-booking h4 {
+  text-transform: uppercase;
+  color: #1C3F5E;
+  font-size: 1.45rem;
+}
+
+#wesanox-booking .box-header {
+  background: #1C3F5E;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 0;
+  max-height: 81px;
+}
+
+#wesanox-booking .image-box__var {
+  top: 0;
+  left: 50%;
+  height: 250px;
+  max-width: 250px;
+  transform: translate(-50%, -50%);
+  border-radius: 125px;
+  overflow: hidden;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+@media only screen and (max-width: 576px) {
+  #wesanox-booking .image-box__var {
+    height: 150px;
+    max-width: 150px;
+    border-radius: 75px;
+  }
+  .woocommerce form .form-row-first,
+  .woocommerce form .form-row-last,
+  .woocommerce-page form .form-row-first,
+  .woocommerce-page form .form-row-last {
+    width: 100% !important;
+  }
+}
+#wesanox-booking .modal .modal-header {
+  padding-bottom: 100px;
+}
+
+#wesanox-booking .modal .modal-price .button-person {
+  background-color: #1C3F5E;
+}
+
+#wesanox-booking .modal .modal-header .modal-close {
+  color: #1C3F5E;
+  padding: 0;
+  top: 10px;
+  right: 10px;
+}
+
+#wesanox-booking .modal .modal-price .person-count {
+  font-size: 75px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#wesanox-booking .modal .modal-price .button-person:hover {
+  cursor: pointer;
+  background-color: #1C3F5E;
+}
+
+#wesanox-booking .modal .modal-price .button-person svg {
+  fill: white;
+}
+
+#wesanox-booking .inactive {
+  pointer-events: none;
+  cursor: default;
+  opacity: 0.5;
+}
+
+#wesanox-booking .step {
+  background: #EBF0F7;
+  min-height: 300px;
+}
+
+#wesanox-booking #room-box,
+#wesanox-booking #extras-box {
+  margin-bottom: 35px;
+}
+
+@media only screen and (max-width: 576px) {
+  #wesanox-booking #extras-box {
+    margin-bottom: 60px;
+  }
+}
+#wesanox-booking #room-box img {
+  width: auto !important;
+  height: 100% !important;
+  max-width: inherit !important;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#wesanox-booking #price-booking,
+#wesanox-booking #price-variation {
+  background-color: #1C3F5E;
+  font-weight: bold;
+}
+
+#wesanox-booking #room-box .btn-settings-close {
+  top: 15px;
+  right: 10px;
+}
+#wesanox-booking #room-box:hover {
+  cursor: pointer;
+}
+#wesanox-booking #room-box svg {
+  fill: white;
+  width: 35px;
+  height: 35px;
+}
+
+#wesanox-booking .nav-swiper .swiper-slide {
+  position: relative;
+  background: white;
+  color: #1C3F5E;
+  z-index: 2;
+  transition: all 0.3s;
+  text-decoration: none;
+}
+
+#wesanox-booking .nav-swiper .swiper-slide.active:after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  height: 20px;
+  width: 20px;
+  background: #1C3F5E;
+  opacity: 0;
+  transition: all 0.3s;
+  transform: translateX(-50%) rotate(45deg);
+  z-index: 1;
+}
+
+#wesanox-booking .nav-swiper .swiper-slide.active:after,
+#wesanox-booking .nav-swiper .swiper-slide.active-background:hover:after {
+  background: #1C3F5E;
+  bottom: -10px;
+  opacity: 1;
+}
+
+#wesanox-booking .nav-swiper .swiper-slide .rounded-circle {
+  border: 1px solid #1C3F5E;
+  width: 50px;
+  height: 50px;
+}
+
+#wesanox-booking .nav-swiper .swiper-slide.active:hover {
+  cursor: pointer;
+}
+
+#wesanox-booking .nav-swiper .swiper-slide.active,
+#wesanox-booking .nav-swiper .swiper-slide.active-background {
+  background: #1C3F5E;
+  color: white;
+}
+
+#wesanox-booking .nav-swiper .swiper-slide.active svg,
+#wesanox-booking .nav-swiper .swiper-slide.active-background svg {
+  fill: #D9B341;
+}
+
+#wesanox-booking .nav-swiper .swiper-slide .checked {
+  background: #D9B341;
+  bottom: -10px;
+  opacity: 1;
+}
+
+#wesanox-booking .nav-swiper .swiper-slide .checked svg {
+  fill: #1C3F5E;
+  width: 35px;
+  height: 35px;
+}
+
+#wesanox-booking .nav-swiper .swiper-slide.active .rounded-circle,
+#wesanox-booking .nav-swiper .swiper-slide.active-background .rounded-circle {
+  border-color: #D9B341;
+}
+
+#wesanox-booking .content-swiper .swiper-wrapper {
+  min-height: 700px;
+}
+
+#wesanox-booking #check-in-out-box {
+  min-height: 560px;
+}
+
+#wesanox-booking #loading,
+#wesanox-booking #loading-three,
+#wesanox-booking #loading-four,
+#wesanox-booking #loading-five {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background-color: white;
+}
+
+#wesanox-booking .loader {
+  border: 5px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 5px solid #1C3F5E;
+  width: 35px;
+  height: 35px;
+  -webkit-animation: spin 2s linear infinite;
+  animation: spin 2s linear infinite;
+}
+
+#wesanox-booking #booking-time-box {
+  max-height: 335px;
+  overflow-y: auto;
+}
+
+#wesanox-booking #extras-box p {
+  min-height: 72px;
+}
+
+#wesanox-booking #extras-box .extra-box-select:hover {
+  cursor: pointer;
+}
+
+#wesanox-booking #extras-box .extra-box-select:hover .bg-white {
+  background-color: #f9f9f9 !important;
+  transition: 0.2s;
+}
+
+#wesanox-booking #extras-box .extra-box-select.active .bg-white {
+  background-color: #f1f1f1 !important;
+}
+
+#wesanox-booking #extras-box .extra-box-select .extra-box-select__circle {
+  width: 35px;
+  height: 35px;
+  background-color: #EBF0F7;
+  border-radius: 50%;
+}
+
+#wesanox-booking #extras-box .extra-box-select .extra-box-select__circle svg {
+  display: none;
+  color: #D9B341;
+}
+
+#wesanox-booking #extras-box .extra-box-select.active .extra-box-select__circle {
+  background-color: #1C3F5E;
+}
+
+#wesanox-booking #extras-box .extra-box-select.active .extra-box-select__circle svg {
+  display: inline;
+}
+
+#wesanox-booking #extras-box small {
+  font-size: 70%;
+}
+
+.woocommerce button.button,
+.woocommerce button.button.alt {
+  background-color: #1C3F5E !important;
+  border: 1px solid #1C3F5E !important;
+  color: white !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.woocommerce button.button:hover,
+.woocommerce button.button.alt:hover {
+  background-color: white !important;
+  color: #1C3F5E !important;
+}
+
+@media only screen and (max-width: 576px) {
+  .woocommerce button.button {
+    width: 100% !important;
+  }
+}
+.woocommerce a {
+  color: #1C3F5E;
+  text-decoration: underline;
+}
+
+.woocommerce a:hover {
+  text-decoration: none !important;
+}
+
+.woocommerce .select2-container .select2-selection--single,
+.woocommerce .select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 39px !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  line-height: 39px !important;
+}
+
+.woocommerce .select2-container--default .select2-selection--single {
+  border-color: #666;
+}
+
+.modal-backdrop {
+  display: none !important;
+}
+
+@media only screen and (min-width: 992px) {
+  .position-lg-absolute {
+    position: absolute;
+  }
+}
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+  }
+}
+#cart_icon {
+  position: relative;
+  display: none;
+}
+#cart_icon.active {
+  display: block;
+}
+#cart_icon:after {
+  content: "1";
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  font-size: 10px;
+  color: white;
+  background: #ff253a;
+  padding: 0 5px;
+  border-radius: 50%;
+}
+
+#wesanox-booking_cart .remove {
+  color: #3c3c3c !important;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#wesanox-booking_cart .remove:hover {
+  color: #ff253a !important;
+  background-color: transparent;
+}
+
+#wesanox-booking_cart th.product-quantity {
+  max-width: 100px;
+}
+
+#wesanox-booking_cart .product-quantity input {
+  width: 75px;
+  padding: 5px 0 5px 5px;
+  text-align: left;
+}
+
+.woocommerce-billing-fields__field-wrapper #start_date,
+.woocommerce-billing-fields__field-wrapper #end_date {
+  background-color: #efefef;
+  border-color: #e1e1e1;
+}
+
+#additional_person_2_firstname_field label,
+#additional_person_3_firstname_field label,
+#additional_person_4_firstname_field label {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+#additional_person_2_lastname_field,
+#additional_person_3_lastname_field,
+#additional_person_4_lastname_field {
+  margin-top: 50px;
+}
+
+@media (max-width: 992px) {
+  #additional_person_2_lastname_field,
+  #additional_person_3_lastname_field,
+  #additional_person_4_lastname_field {
+    margin-top: 0;
+  }
+}
+@media (min-width: 1200px) {
+  .page-header .entry-title {
+    max-width: 1340px !important;
+    margin: 50px 0;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+}
+
+/*# sourceMappingURL=styles.css.map */

@@ -12,15 +12,12 @@ function create_wesanox_rates_table()
         id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
         
         rate_day TINYINT(3) UNSIGNED NULL,
-        rate_time_from TIME NULL,
-        rate_time_to TIME NULL,
+        rate_time_from TIME DEFAULT NULL,
+        rate_time_to TIME DEFAULT NULL,
 
         product_id BIGINT(20) UNSIGNED NULL,
         product_variation_id BIGINT(20) UNSIGNED NULL,
         roomart_id BIGINT(20) UNSIGNED NULL,
-
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
         PRIMARY KEY (id),
         

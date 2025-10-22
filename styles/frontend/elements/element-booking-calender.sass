@@ -1,0 +1,139 @@
+#wesanox-booking
+  span
+    &.available
+      display: block
+      border-radius: 5px
+      height: 10px
+      width: 10px
+      background: green
+
+    &.fully-booked
+      display: block
+      border-radius: 5px
+      height: 10px
+      width: 10px
+      background: red
+
+    &.middle
+      display: block
+      border-radius: 5px
+      height: 10px
+      width: 10px
+      background: darkorange
+
+  #wesanox-booking-calendar
+    min-height: 350px
+    width: 100%
+
+  table
+    background-color: white
+
+    th
+      padding: 5px 0 25px
+      border-color: transparent !important
+
+    td
+      padding: 5px 0 25px
+      border-color: transparent !important
+
+      &.zabuto-calendar
+        &__navigation
+          &__item
+            &--header
+              vertical-align: middle
+              background-color: $primary-color
+              color: white
+              padding: 5px 0
+
+            &--prev
+              vertical-align: middle
+              background-color: $primary-color
+              color: white
+              padding: 5px 0
+
+              .prev
+                &:after
+                  content: '<'
+                  font-size: 20px
+
+            &--next
+              vertical-align: middle
+              background-color: $primary-color
+              color: white
+              padding: 5px 0
+
+              .next
+                &:after
+                  content: '>'
+                  font-size: 20px
+
+        &__day
+          position: relative
+          width: 40px
+
+          &:after
+            content: ''
+            position: absolute
+            bottom: 10px
+            left: 50%
+            transform: translateX(-50%)
+            height: 10px
+            width: 10px
+            border-radius: 5px
+            background: transparent
+            transition: all .3s
+            z-index: 1
+
+          &.fully-booked
+            &:after
+              background: red
+
+          &--today
+            position: relative
+            width: 40px
+
+            &:after
+              content: ''
+              position: absolute
+              bottom: 10px
+              left: 50%
+              transform: translateX(-50%)
+              height: 10px
+              width: 10px
+              border-radius: 5px
+              background: transparent
+              transition: all .3s
+              z-index: 1
+
+            &.fully-booked
+              &::after
+                background: red
+
+          &--empty
+            width: 40px
+
+          &.active,
+          &--today.active
+            background-color: $primary-color !important
+            color: white !important
+
+
+          &.middle,
+          &--today.middle
+            &:after
+              background: darkorange
+
+            &:hover
+              background-color: $primary-color !important
+              color: white !important
+              cursor: pointer
+
+          &.available,
+          &--today.available
+            &::after
+              background: green
+
+            &:hover
+              background-color: $primary-color !important
+              color: white !important
+              cursor: pointer

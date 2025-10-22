@@ -1,0 +1,563 @@
+/** @TODO framework intregieren
+
+
+/** ---- Import Variables ---- **/
+@import "./main/_variables.sass"
+@import "../functions/_functions.sass"
+
+/** ---- Import Elements ---- **/
+@import "./elements/element-booking-persons.sass"
+@import "./elements/element-booking-calender.sass"
+@import "./elements/element-booking-time.sass"
+@import "./elements/element-booking-item.sass"
+
+/** ---- Button Style ---- **/
+.btn
+  &-primary
+    background-color: $primary-color!important
+    border-color: $primary-color!important
+    color: white!important
+    border-radius: 0!important
+    box-shadow: none!important
+    font-weight: 300!important
+    text-transform: uppercase!important
+    text-decoration: none!important
+
+    &:focus,
+    &:active,
+    &:focus-visible
+      background-color: $primary-color!important
+      border-color: $primary-color!important
+      color: white!important
+      border-radius: 0!important
+      box-shadow: none!important
+      font-weight: 300!important
+      text-transform: uppercase!important
+
+    &:hover
+      background-color: white!important
+      color: $primary-color!important
+    
+    &.forward 
+      padding: 3px 12px 3px 20px!important
+      
+      span 
+        font-size: 20px
+        padding-left: 10px
+
+    &.back 
+      padding: 3px 20px 3px 12px!important
+
+      span 
+        font-size: 20px
+        padding-right: 10px
+        
+    &-outline
+      &:hover
+        background-color: $primary-color!important
+        color: white!important    
+    
+.components
+  &-button,
+  &-button:focus,
+  &-button:active,
+  &-button:focus-visible 
+    background-color: $primary-color!important
+    border-color: $primary-color!important
+    color: white!important
+    border-radius: 0!important
+    box-shadow: none!important
+    font-weight: 300!important
+    text-transform: uppercase!important
+    
+  &-button:hover
+    background-color: white!important
+    color: $primary-color!important
+    
+.delete-cart-link 
+  color: $primary-color
+  cursor: pointer
+
+  &:hover 
+    color: $danger-color
+
+
+    
+/** ---- main styles ---- **/    
+.get-product_id 
+  padding-left: 0!important
+  padding-right: 0!important
+
+.col-12 
+  img
+    &.attachment-woocommerce_thumbnail 
+      width: 100%
+
+      @media only screen and (max-width: $media-sm)
+        width: 50%
+
+/** ---- Text styles ---- **/   
+.text
+  &-blue 
+    color: $primary-color
+
+/** ---- WooCommerce styles ---- **/    
+.woocommerce
+  &-message
+    position: absolute!important
+    top: 0
+    z-index: 1000
+    width: 100%!important
+
+  &-notices
+    &-wrapper 
+      .woocommerce
+        &-message 
+          margin-bottom: 0
+
+
+#cart-segment 
+  .woocommerce 
+    button.button,
+    button.button.alt 
+      border-radius: 0!important
+      min-height: 37px
+
+:where(body:not(.woocommerce-block-theme-has-button-styles)) .woocommerce a.button.alt 
+  background-color: $primary-color!important
+  border: 1px solid $primary-color!important
+  color: white!important
+  border-radius: 0!important
+  transition: .2s
+
+:where(body:not(.woocommerce-block-theme-has-button-styles)) .woocommerce a.button.alt:hover 
+  background-color: white!important
+  color: $primary-color!important
+
+#wesanox-booking_cart .coupon 
+  width: 48%!important
+
+#wesanox-booking_cart .coupon #coupon_code 
+  width: 49.5%!important
+  border-radius: 0!important
+
+
+#wesanox-booking_cart .coupon button 
+  font-size: 1rem!important
+  min-height: 42px!important
+  border: 1px solid $primary-color!important
+  width: 49.5%!important
+
+
+@media only screen and (max-width: 1024px)
+  #wesanox-booking_cart .coupon #coupon_code,
+  #wesanox-booking_cart .coupon button 
+    width: 100%!important
+
+  #cart-segment .coupon button 
+    margin-top: 10px
+    margin-bottom: 30px
+
+@media only screen and (max-width: $media-lg) 
+  #wesanox-booking_cart .coupon 
+    width: 98%!important
+  
+#cart-segment .quantity input[type="number"] 
+  min-width: 75px
+  padding-left: 5px
+  padding-right: 0
+
+#cart-upsell-box 
+  background: rgba(255, 255, 255, 0.8)
+  padding: 60px
+
+@media only screen and (max-width: $media-sm) 
+  #cart-upsell-box 
+    padding: 30px
+
+#cart-upsell-box h2.text-blue 
+  color: $primary-color
+  font-weight: 400
+  font-size: 24px
+  text-transform: uppercase
+
+#cart-upsell-box .checkbox-extras 
+  position: relative
+  width: 50px
+  height: 50px
+  background: $background-light
+  border: 1px solid $border-light
+
+#cart-upsell-box .checkbox-extras svg 
+  display: none
+
+#cart-upsell-box .checkbox-extras.active 
+  background: $primary-color
+  border-color: $secondary-color
+
+#cart-upsell-box .checkbox-extras.active svg
+  display: block
+  position: absolute
+  color: $secondary-color
+  top: 50%
+  left: 50%
+  transform: translate(-50%, -50%)
+
+
+#wesanox-booking 
+  min-height: 50vh
+  font-weight: 300!important
+
+#wesanox-booking .timer-box 
+  background: $primary-color
+  color: white
+  padding: 10px 20px
+  border-radius: 0
+
+
+#wesanox-booking h4 
+  text-transform: uppercase
+  color: $primary-color
+  font-size: 1.45rem
+
+
+#wesanox-booking .box-header
+  background: $primary-color
+  color: white
+  padding: 10px 20px
+  border-radius: 0
+  max-height: 81px
+
+#wesanox-booking .image-box__var
+  top: 0
+  left: 50%
+  height: 250px
+  max-width: 250px
+  transform: translate(-50%, -50%)
+  border-radius: 125px
+  overflow: hidden
+  background-position: center
+  background-size: cover
+  background-repeat: no-repeat
+
+@media only screen and (max-width: $media-sm) 
+  #wesanox-booking .image-box__var
+    height: 150px
+    max-width: 150px
+    border-radius: 75px
+
+  .woocommerce form .form-row-first,
+  .woocommerce form .form-row-last,
+  .woocommerce-page form .form-row-first,
+  .woocommerce-page form .form-row-last
+    width: 100%!important
+
+#wesanox-booking .modal .modal-header 
+  padding-bottom: 100px
+
+
+#wesanox-booking .modal .modal-price .button-person 
+  background-color: $primary-color
+
+#wesanox-booking .modal .modal-header .modal-close 
+  color: $primary-color
+  padding: 0
+  top: 10px
+  right: 10px
+
+#wesanox-booking .modal .modal-price .person-count 
+  font-size: 75px
+  top: 50%
+  left: 50%
+  transform: translate(-50%, -50%)
+
+#wesanox-booking .modal .modal-price .button-person:hover 
+  cursor: pointer
+  background-color: $primary-color
+
+#wesanox-booking .modal .modal-price .button-person svg 
+  fill: white
+
+#wesanox-booking .inactive 
+  pointer-events: none
+  cursor: default
+  opacity: 0.5
+
+
+#wesanox-booking .step 
+  background: #EBF0F7
+  min-height: 300px
+
+#wesanox-booking #room-box,
+#wesanox-booking #extras-box 
+  margin-bottom: 35px
+
+@media only screen and (max-width: $media-sm) 
+  #wesanox-booking #extras-box 
+    margin-bottom: 60px
+
+
+#wesanox-booking #room-box img 
+  width: auto!important
+  height: 100%!important
+  max-width: inherit!important
+  left: 50%
+  transform: translateX(-50%)
+
+#wesanox-booking #price-booking,
+#wesanox-booking #price-variation 
+  background-color: $primary-color
+  font-weight: bold
+
+#wesanox-booking
+  #room-box
+    .btn-settings-close
+      top: 15px
+      right: 10px
+
+    &:hover
+      cursor: pointer
+
+    svg
+      fill: white
+      width: 35px
+      height: 35px
+
+#wesanox-booking .nav-swiper .swiper-slide 
+  position: relative
+  background: white
+  color: $primary-color
+  z-index: 2
+  transition: all .3s
+  text-decoration: none
+
+#wesanox-booking .nav-swiper .swiper-slide.active:after
+  content: ''
+  position: absolute
+  bottom: 0
+  left: 50%
+  height: 20px
+  width: 20px
+  background: $primary-color
+  opacity: 0
+  transition: all .3s
+  transform: translateX(-50%) rotate(45deg)
+  z-index: 1
+
+#wesanox-booking .nav-swiper .swiper-slide.active:after,
+#wesanox-booking .nav-swiper .swiper-slide.active-background:hover:after 
+  background: $primary-color
+  bottom: -10px
+  opacity: 1
+
+#wesanox-booking .nav-swiper .swiper-slide .rounded-circle 
+  border: 1px solid $primary-color
+  width: 50px
+  height: 50px
+
+#wesanox-booking .nav-swiper .swiper-slide.active:hover 
+  cursor: pointer
+
+#wesanox-booking .nav-swiper .swiper-slide.active,
+#wesanox-booking .nav-swiper .swiper-slide.active-background 
+  background: $primary-color
+  color: white
+
+#wesanox-booking .nav-swiper .swiper-slide.active svg,
+#wesanox-booking .nav-swiper .swiper-slide.active-background svg 
+  fill: $secondary-color
+
+#wesanox-booking .nav-swiper .swiper-slide .checked 
+  background: $secondary-color
+  bottom: -10px
+  opacity: 1
+
+#wesanox-booking .nav-swiper .swiper-slide .checked svg 
+  fill: $primary-color
+  width: 35px
+  height: 35px
+
+#wesanox-booking .nav-swiper .swiper-slide.active .rounded-circle,
+#wesanox-booking .nav-swiper .swiper-slide.active-background .rounded-circle 
+  border-color: $secondary-color
+
+#wesanox-booking .content-swiper .swiper-wrapper 
+  min-height: 700px
+
+#wesanox-booking #check-in-out-box 
+  min-height: 560px
+
+#wesanox-booking #loading,
+#wesanox-booking #loading-three,
+#wesanox-booking #loading-four,
+#wesanox-booking #loading-five 
+  display: flex
+  justify-content: center
+  align-items: center
+  width: 100%
+  height: 100%
+  top: 50%
+  left: 50%
+  transform: translate(-50%, -50%)
+  z-index: 1000
+  background-color: white
+
+#wesanox-booking .loader 
+  border: 5px solid #f3f3f3
+  border-radius: 50%
+  border-top: 5px solid $primary-color
+  width: 35px
+  height: 35px
+  -webkit-animation: spin 2s linear infinite
+  animation: spin 2s linear infinite
+
+#wesanox-booking #booking-time-box 
+  max-height: 335px
+  overflow-y: auto
+
+#wesanox-booking #extras-box p 
+  min-height: 72px
+
+#wesanox-booking #extras-box .extra-box-select:hover 
+  cursor: pointer
+
+#wesanox-booking #extras-box .extra-box-select:hover .bg-white 
+  background-color: #f9f9f9!important
+  transition: .2s
+
+#wesanox-booking #extras-box .extra-box-select.active .bg-white 
+  background-color: #f1f1f1!important
+
+#wesanox-booking #extras-box .extra-box-select .extra-box-select__circle 
+  width: 35px
+  height: 35px
+  background-color: #EBF0F7
+  border-radius: 50%
+
+#wesanox-booking #extras-box .extra-box-select .extra-box-select__circle svg 
+  display: none
+  color: $secondary-color
+
+#wesanox-booking #extras-box .extra-box-select.active .extra-box-select__circle 
+  background-color: $primary-color
+
+#wesanox-booking #extras-box .extra-box-select.active .extra-box-select__circle svg 
+  display: inline
+
+#wesanox-booking #extras-box small 
+  font-size: 70%
+
+.woocommerce button.button,
+.woocommerce button.button.alt 
+  background-color: $primary-color!important
+  border: 1px solid $primary-color!important
+  color: white!important
+  border-radius: 0!important
+  box-shadow: none!important
+
+.woocommerce button.button:hover,
+.woocommerce button.button.alt:hover 
+  background-color: white!important
+  color: $primary-color!important
+
+@media only screen and (max-width: $media-sm) 
+  .woocommerce button.button 
+    width: 100%!important
+
+.woocommerce a 
+  color: $primary-color
+  text-decoration: underline
+
+.woocommerce a:hover 
+  text-decoration: none!important
+
+.woocommerce .select2-container .select2-selection--single,
+.woocommerce .select2-container--default .select2-selection--single .select2-selection__arrow 
+  height: 39px!important
+
+.select2-container--default .select2-selection--single .select2-selection__rendered 
+  line-height: 39px!important
+
+.woocommerce .select2-container--default .select2-selection--single 
+  border-color: #666
+
+.modal-backdrop 
+  display: none!important
+
+@media only screen and (min-width: $media-lg) 
+  .position-lg-absolute 
+    position: absolute
+
+
+@keyframes spin 
+  0% 
+    transform: rotate(0deg)
+    -webkit-transform: rotate(0deg)
+  100% 
+    transform: rotate(360deg)
+    -webkit-transform: rotate(360deg)
+
+#cart_icon 
+  position: relative
+  display: none
+
+  &.active 
+    display: block
+
+  &:after 
+    content: '1'
+    position: absolute
+    top: -5px
+    right: -5px
+    font-size: 10px
+    color: white
+    background: $danger-color
+    padding: 0 5px
+    border-radius: 50%
+
+#wesanox-booking_cart .remove 
+  color: #3c3c3c!important
+  cursor: pointer
+  transition: .2s
+
+#wesanox-booking_cart .remove:hover 
+  color: $danger-color!important
+  background-color: transparent
+
+#wesanox-booking_cart th.product-quantity 
+  max-width: 100px
+
+#wesanox-booking_cart .product-quantity input 
+  width: 75px
+  padding: 5px 0 5px 5px
+  text-align: left
+
+.woocommerce-billing-fields__field-wrapper #start_date,
+.woocommerce-billing-fields__field-wrapper #end_date 
+  background-color: #efefef
+  border-color: #e1e1e1
+
+#additional_person_2_firstname_field label,
+#additional_person_3_firstname_field label,
+#additional_person_4_firstname_field label 
+  font-size: 20px
+  font-weight: bold
+  margin-bottom: 10px
+
+#additional_person_2_lastname_field,
+#additional_person_3_lastname_field,
+#additional_person_4_lastname_field 
+  margin-top: 50px
+
+@media (max-width: $media-lg) 
+  #additional_person_2_lastname_field,
+  #additional_person_3_lastname_field,
+  #additional_person_4_lastname_field 
+    margin-top: 0
+
+@media (min-width: $media-xl) 
+  .page-header .entry-title 
+    max-width: 1340px!important
+    margin: 50px 0
+    text-transform: uppercase
+    font-weight: 400

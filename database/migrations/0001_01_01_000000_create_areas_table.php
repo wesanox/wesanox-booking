@@ -11,9 +11,9 @@ function create_wesanox_areas_table()
     $sql = "CREATE TABLE {$table_name} (
         id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
         
-        area_name VARCHAR(190) NULL,
-        area_opening LONGTEXT NULL,
-        area_time_settings LONGTEXT NULL,
+        area_name VARCHAR(190) DEFAULT NULL,
+        area_opening LONGTEXT DEFAULT NULL,
+        area_time_settings LONGTEXT DEFAULT NULL,
         
         PRIMARY KEY  (id),
         

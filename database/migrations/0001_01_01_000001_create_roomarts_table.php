@@ -11,7 +11,7 @@ function create_wesanox_roomarts_table()
     $sql = "CREATE TABLE {$table_name} (
         id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
         
-        roomart_name VARCHAR(255) NOT NULL,
+        roomart_name VARCHAR(255) DEFAULT NULL,
         
         PRIMARY KEY (id)
     ) $charset_collate;";
