@@ -11,6 +11,7 @@ class HandlerBooking
         add_action('woocommerce_order_status_changed', [$this, 'wesanox_handle_order'], 10, 1 );
         add_action('woocommerce_checkout_order_processed', [$this, 'wesanox_handle_order'], 10, 1 );
     }
+
     public function wesanox_handle_order($order_id) {
         $order = wc_get_order($order_id);
 
@@ -47,7 +48,7 @@ class HandlerBooking
         }
     }
 
-    private function api_call_requests($urlSection) {
+    public function api_call_requests($urlSection) {
         global $wpdb;
 
         include_once(ABSPATH . 'wp-admin/includes/plugin.php');

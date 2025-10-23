@@ -6,21 +6,25 @@ defined( 'ABSPATH' )|| exit;
 
 use DateTime;
 use DateTimeZone;
+use Wesanox\Booking\Boot\Booking\HandlerBooking;
 use Wesanox\Booking\Service\ServiceBookingTime;
 use Wesanox\Booking\Service\ServiceGetAvailableRoomarts;
 use Wesanox\Booking\Repository\RepositoryBooking;
+use Wesanox\Booking\Boot\Booking;
 
 class WoocommerceProductHandler
 {
     protected ServiceBookingTime $service_booking_time;
     protected ServiceGetAvailableRoomarts $service_get_available_roomarts;
     protected RepositoryBooking $repository_booking;
+    protected HandlerBooking $handler_booking;
 
     public function __construct()
     {
         $this->service_booking_time = new ServiceBookingTime();
         $this->service_get_available_roomarts = new ServiceGetAvailableRoomarts();
         $this->repository_booking = new RepositoryBooking();
+        $this->handler_booking = new HandlerBooking();
 
         /**
          * Represents the current object instance in the context of a class.
@@ -657,13 +661,25 @@ class WoocommerceProductHandler
         }
 
         $roomart_id = null;
+
         foreach (WC()->cart->get_cart() as $item) {
             if ((int)$item['product_id'] === 75) $roomart_id = 1;
             if ((int)$item['product_id'] === 91) $roomart_id = 2;
         }
+
         if ($roomart_id === null) return;
 
+
+        /**
+         * @TODO api_call_requests should be privat!
+         */
         $free_room_id = $this->service_get_available_roomarts->wesanox_find_room($roomart_id, $day, $start_time.':00', $stop_time.':00', 30);
+//        $free_room_id_api = $this->handler_booking->api_call_requests('bookings/get-available-roomart?' . $roomart_id . '&booking_date=' . $day . '&time_start=' . $start_time.':00&time_end=' . $stop_time.':00');
+
+//        if (!$free_room_id && !$free_room_id_api) {
+//            wc_add_notice(__('Der gewünschte Zeitraum ist nicht mehr verfügbar. Bitte wähle einen anderen Zeitraum.'), 'error');
+//            return;
+//        }
 
         if (!$free_room_id) {
             wc_add_notice(__('Der gewünschte Zeitraum ist nicht mehr verfügbar. Bitte wähle einen anderen Zeitraum.'), 'error');
