@@ -79,6 +79,10 @@ class WoocommerceProductHandler
         add_filter('woocommerce_email_attachments', [$this, 'add_ics_attachment_to_email'], 10, 4);
         add_filter('woocommerce_product_data_tabs', [$this, 'medi_product_data_tab']);
         add_filter('woocommerce_form_field_heading', [$this, 'add_heading_to_additional_field'], 10, 4);
+
+        add_filter('woocommerce_cart_needs_shipping_address', function($needs){
+            return true; // erzwingt Anzeige des "An eine andere Adresse liefern?" Bereichs
+        }, 10, 1);
     }
 
     /**

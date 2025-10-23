@@ -19,11 +19,18 @@ jQuery(document).ready(function($){
     $(".add-to-cart-btn").click(function() {
         var product_id = $(this).data("product_id");
 
+        const s = bookingStore.get();
+
         syncBookingToServer().always(function(){
             $.post(ajax_object_item.ajax_url_item, {
                 action: 'add_product_to_cart',
                 nonce: ajax_object_item.nonce,
-                product_id: product_id
+                product_id: product_id,
+                day:  s.day,
+                person_count: s.person_count,
+                start_time: s.start_time,
+                stop_time: s.stop_time,
+                how_long: s.how_long,
             }, function(response){
                 console.log(response);
 

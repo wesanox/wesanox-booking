@@ -74,7 +74,6 @@ jQuery(document).ready(function($) {
         $('#element-booking-duration').css('margin-left', step_width * 2 + 25 + 'px');
     }
 
-
     /**
      * Slider for the Booking Navigation and Content
      *
@@ -185,6 +184,7 @@ jQuery(document).ready(function($) {
                 bookingStore.reset();
             }
             resetUI();
+            window.location.href = '/';
         });
     }
 
