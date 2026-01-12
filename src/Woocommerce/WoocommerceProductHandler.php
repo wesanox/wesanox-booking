@@ -84,9 +84,9 @@ class WoocommerceProductHandler
         add_filter('woocommerce_product_data_tabs', [$this, 'medi_product_data_tab']);
         add_filter('woocommerce_form_field_heading', [$this, 'add_heading_to_additional_field'], 10, 4);
 
-        add_filter('woocommerce_cart_needs_shipping_address', function($needs){
-            return true; // erzwingt Anzeige des "An eine andere Adresse liefern?" Bereichs
-        }, 10, 1);
+//        add_filter('woocommerce_cart_needs_shipping_address', function($needs){
+//            return true; // erzwingt Anzeige des "An eine andere Adresse liefern?" Bereichs
+//        }, 10, 1);
     }
 
     /**
@@ -100,12 +100,14 @@ class WoocommerceProductHandler
 
         $extras_json = isset($_POST['extras']) ? wp_unslash($_POST['extras']) : '[]';
         $extras = json_decode($extras_json, true);
+
         if (!is_array($extras)) {
-            $extras = '';
+            $extras = [];
         }
 
-        $booking = (array)WC()->session->get('booking', []);
-        $booking['extras'] = $extras;
+        $booking = (array) WC()->session->get('booking', []);
+        $booking['extras'] = json_encode($extras);
+
         WC()->session->set('booking', $booking);
 
         wp_send_json_success(['extras' => $extras]);
@@ -292,28 +294,38 @@ class WoocommerceProductHandler
             die('Ungültige Anfrage');
         }
 
-        if (WC()->cart->get_cart_contents_count() == 0) {
+        if ( ! function_exists('WC') || ! WC()->cart ) {
+            wp_send_json_error('Warenkorb nicht verfügbar.');
+            wp_die();
+        }
+
+        if ( WC()->cart->get_cart_contents_count() === 0 ) {
             wp_send_json_error('Warenkorb ist leer.');
             wp_die();
         }
 
-        $product_id = intval($_POST['product_id']);
-        $cart_items = WC()->cart->get_cart();
+        $product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
 
-        if ( $product_id ) {
-            foreach($cart_items as $cart_item_key => $item) {
-                if($item['product_id'] == $product_id) {
-                    WC()->cart->remove_cart_item($cart_item_key);
-                    break;
-                }
+        if ( ! $product_id ) {
+            wp_send_json_error('Ungültige Produkt-ID.');
+            wp_die();
+        }
 
-                if($item['variation_id'] == $product_id) {
-                    WC()->cart->remove_cart_item($cart_item_key);
-                    break;
-                }
+        $removed = false;
+
+        foreach ( WC()->cart->get_cart() as $cart_item_key => $item ) {
+            if (
+                (int) $item['product_id'] === $product_id
+            ) {
+                WC()->cart->remove_cart_item( $cart_item_key );
+                $removed = true;
             }
+        }
 
-            echo 'success';
+        if ( $removed ) {
+            wp_send_json_success('Alle passenden Produkte entfernt.');
+        } else {
+            wp_send_json_error('Produkt nicht im Warenkorb gefunden.');
         }
 
         wp_die();
@@ -386,49 +398,34 @@ class WoocommerceProductHandler
         //     wp_send_json_error(['message' => 'Ungültige Anfrage (Nonce).'], 403);
         // }
 
-        if ( ! isset($_POST['variation_id']) ) {
-            wp_send_json_error('variation_id fehlt!', 400);
+        if ( ! isset($_POST['product_id']) ) {
+            wp_send_json_error('product_id fehlt!', 400);
         }
 
         if ( ! function_exists('WC') || ! WC()->cart || ! WC()->session ) {
             wp_send_json_error('Warenkorb/Session nicht verfügbar.', 500);
         }
 
-        $variation_id   = absint($_POST['variation_id']);
+        $product_id = absint($_POST['product_id']);
+        $quantity   = isset($_POST['quantity']) ? absint($_POST['quantity']) : 1;
 
-        // Menge ermitteln (deine Sonderfälle beibehalten)
-        $quantity_raw   = isset($_POST['quantity']) ? intval($_POST['quantity']) : 1;
-        $quant_raw      = isset($_POST['quant']) ? intval($_POST['quant']) : $quantity_raw;
+        if(!empty($_POST['variation_ids'])) {
+            foreach ($_POST['variation_ids'] as $variation_id) {
+                $cart_item_key = WC()->cart->add_to_cart($product_id, 1, $variation_id);
 
-        if ( in_array($variation_id, [95,96], true) ) {
-            $qty = 1;
-        } elseif ( $variation_id === 235 ) {
-            $qty = max(1, $quant_raw);
+                if ( ! $cart_item_key ) {
+                    wp_send_json_error('Fehler beim Hinzufügen der Variation zum Warenkorb!', 500);
+                }
+            }
         } else {
-            $qty = max(1, $quantity_raw);
-        }
+            $cart_item_key = WC()->cart->add_to_cart($product_id, $quantity);
 
-        // Variation korrekt hinzufügen
-        $parent_id = wp_get_post_parent_id($variation_id);
-        // Variation-Attribute aus AJAX übernehmen (falls vorhanden), z.B. ["attribute_pa_farbe" => "rot"]
-        $variation_attributes = [];
-        if ( isset($_POST['variation']) && is_array($_POST['variation']) ) {
-            foreach ($_POST['variation'] as $k => $v) {
-                $variation_attributes[wc_clean($k)] = wc_clean($v);
+            if ( ! $cart_item_key ) {
+                wp_send_json_error('Fehler beim Hinzufügen der Variation zum Warenkorb!', 500);
             }
         }
 
-        // add_to_cart: (product_id, qty, variation_id, variation_attributes, cart_item_data)
-        // Wenn keine Parent-ID vorhanden (zur Sicherheit), nimm variation_id als product_id.
-        $product_id = $parent_id ? $parent_id : $variation_id;
 
-        $cart_item_key = WC()->cart->add_to_cart($product_id, $qty, $parent_id ? $variation_id : 0, $variation_attributes, /*$cart_item_data*/[]);
-
-        if ( ! $cart_item_key ) {
-            wp_send_json_error('Fehler beim Hinzufügen der Variation zum Warenkorb!', 500);
-        }
-
-        // --- WC Session: Booking-Daten ablegen (kompatibel zu deiner Payload-Funktion) ---
         $session = WC()->session;
         $existing = (array) $session->get('booking', []);
 
@@ -439,26 +436,12 @@ class WoocommerceProductHandler
         $stop_time    = isset($_POST['stop_time'])   ? sanitize_text_field( wp_unslash($_POST['stop_time']) )   : (string) ($existing['stop_time'] ?? '');
         $how_long     = isset($_POST['how_long'])    ? (int) $_POST['how_long']                                 : (int) ($existing['how_long'] ?? 0);
 
-        // optional: extras aus POST (Array oder JSON) übernehmen
-        $extras = [];
-        if ( isset($_POST['extras']) ) {
-            $extras = is_array($_POST['extras']) ? $_POST['extras'] : json_decode(wp_unslash($_POST['extras']), true);
-            if ( ! is_array($extras) ) { $extras = []; }
-        } elseif ( isset($_POST['extra_select']) ) {
-            // falls du noch ein einzelnes Feld nutzt
-            $extras = ['extra_select' => sanitize_text_field( wp_unslash($_POST['extra_select']) )];
-        } else {
-            // Fallback: vorhandene Extras aus Session
-            $extras = isset($existing['extras']) ? (array) $existing['extras'] : [];
-        }
-
         $booking = [
             'person_count' => $person_count ?: null,
             'day'          => $day         ?: null,
             'start_time'   => $start_time  ?: null,
             'stop_time'    => $stop_time   ?: null,
             'how_long'     => $how_long    ?: null,
-            'extras'       => json_encode($extras),
         ];
 
         $booking['start'] = ($booking['day'] && $booking['start_time']) ? ($booking['day'].' '.$booking['start_time']) : null;
@@ -601,17 +584,21 @@ class WoocommerceProductHandler
         $room_id = (int) $order->get_meta('_booking_room_id');
         if (!$room_id) {
             $roomart_id = null;
+
             foreach (WC()->cart->get_cart() as $item) {
                 if ((int)$item['product_id'] === 75) $roomart_id = 1;
                 if ((int)$item['product_id'] === 91) $roomart_id = 2;
             }
+
             if ($roomart_id) {
                 $room_id = (int) $this->service_get_available_roomarts->wesanox_find_room($roomart_id, $day, $start_time.':00', $stop_time.':00', 30);
             }
         }
+
         if (!$room_id) return;
 
-        $customer_id = (int) $order->get_customer_id(); // 0 bei Gast
+        $customer_id = (int) $order->get_customer_id();
+
         if ( $customer_id > 0 ) {
             $exists = (int) $wpdb->get_var( $wpdb->prepare(
                 "SELECT COUNT(1) FROM {$wpdb->prefix}wc_customer_lookup WHERE customer_id = %d",
@@ -644,6 +631,7 @@ class WoocommerceProductHandler
 
         WC()->session->__unset('booking');
         WC()->session->__unset('booking_free_room_id');
+        WC()->cart->empty_cart();
     }
 
 
@@ -651,42 +639,67 @@ class WoocommerceProductHandler
     {
         $booking = ( function_exists('WC') && WC()->session ) ? (array) WC()->session->get('booking', []) : [];
 
-        $day        = $booking['day'] ?? null;           // "YYYY-MM-DD"
-        $start_time = $booking['start_time'] ?? null;    // "HH:MM"
-        $stop_time  = $booking['stop_time'] ?? null;     // "HH:MM"
+        $day        = $booking['day'] ?? null;
+        $start_time = $booking['start_time'] ?? null;
+        $stop_time  = $booking['stop_time'] ?? null;
 
-        if (!$day || !$start_time || !$stop_time) {
-            wc_add_notice(__('Bitte wähle Check-in-Tag und Start-/Endzeit neu aus.'), 'error');
-            return;
+        $coupon = $this->cart_contains_product(2807);
+
+        if ($day || $start_time || $stop_time) {
+            $roomart_id = null;
+
+            foreach (WC()->cart->get_cart() as $item) {
+                if ((int)$item['product_id'] === 75) $roomart_id = 1;
+                if ((int)$item['product_id'] === 91) $roomart_id = 2;
+            }
+
+            if ($roomart_id === null) return;
+
+            /**
+             * @TODO api_call_requests should be private!
+             */
+            $free_room_id = $this->service_get_available_roomarts->wesanox_find_room($roomart_id, $day, $start_time.':00', $stop_time.':00', 30);
+            $free_room_id_api = $this->handler_booking->api_call_requests('bookings/get-available-roomart?' . $roomart_id . '&booking_date=' . $day . '&time_start=' . $start_time.':00&time_end=' . $stop_time.':00');
+
+            if (!$free_room_id && !$free_room_id_api) {
+                wc_add_notice(__('Der gewünschte Zeitraum ist nicht mehr verfügbar. Bitte wähle einen anderen Zeitraum. A'), 'error');
+                return;
+            }
+
+            if (!$free_room_id) {
+                wc_add_notice(__('Der gewünschte Zeitraum ist nicht mehr verfügbar. Bitte wähle einen anderen Zeitraum.'), 'error');
+                return;
+            }
+
+            WC()->session->set('booking_free_room_id', (int)$free_room_id);
+        } else if ( $coupon ) {
+
+        } else {
+            wc_add_notice(__('Es gab ein Problem bei der Übergabe der Buchungsdaten - bitte erstelle eine neue Buchung.'), 'error');
+            WC()->session->__unset('booking');
+            WC()->cart->empty_cart();
+            wp_safe_redirect( wc_get_page_permalink('/') );
+            exit;
+        }
+    }
+
+    /**
+     * @param int $product_id
+     * @return bool
+     */
+    private function cart_contains_product( int $product_id ): bool {
+        if ( ! WC()->cart ) {
+            return false;
         }
 
-        $roomart_id = null;
-
-        foreach (WC()->cart->get_cart() as $item) {
-            if ((int)$item['product_id'] === 75) $roomart_id = 1;
-            if ((int)$item['product_id'] === 91) $roomart_id = 2;
+        foreach ( WC()->cart->get_cart() as $cart_item ) {
+            if ( (int) $cart_item['product_id'] === $product_id ||
+                (int) $cart_item['variation_id'] === $product_id ) {
+                return true;
+            }
         }
 
-        if ($roomart_id === null) return;
-
-
-        /**
-         * @TODO api_call_requests should be privat!
-         */
-        $free_room_id = $this->service_get_available_roomarts->wesanox_find_room($roomart_id, $day, $start_time.':00', $stop_time.':00', 30);
-//        $free_room_id_api = $this->handler_booking->api_call_requests('bookings/get-available-roomart?' . $roomart_id . '&booking_date=' . $day . '&time_start=' . $start_time.':00&time_end=' . $stop_time.':00');
-
-//        if (!$free_room_id && !$free_room_id_api) {
-//            wc_add_notice(__('Der gewünschte Zeitraum ist nicht mehr verfügbar. Bitte wähle einen anderen Zeitraum.'), 'error');
-//            return;
-//        }
-
-        if (!$free_room_id) {
-            wc_add_notice(__('Der gewünschte Zeitraum ist nicht mehr verfügbar. Bitte wähle einen anderen Zeitraum.'), 'error');
-            return;
-        }
-
-        WC()->session->set('booking_free_room_id', (int)$free_room_id);
+        return false;
     }
 
     /**
@@ -696,6 +709,8 @@ class WoocommerceProductHandler
      * @return void
      */
     public function checkout_order_meta_update( $order_id ) {
+        $booking = ( function_exists('WC') && WC()->session ) ? (array) WC()->session->get('booking', []) : [];
+
         $person = $_POST['person'];
 
         if ( ! empty( $_POST['billing_birthdate'] ) ) {
@@ -750,9 +765,9 @@ class WoocommerceProductHandler
             }
         }
 
-        if ( $_SESSION['extra_select'] != ''  ) {
+        if ( isset($booking['extras'])  ) {
             $order = wc_get_order( $order_id );
-            $order->update_meta_data( 'Extra', sanitize_text_field( json_encode($_SESSION['extra_select']) ) );
+            $order->update_meta_data( 'Extra', sanitize_text_field( $booking['extras'] ) );
             $order->save_meta_data();
         }
 
@@ -840,10 +855,12 @@ class WoocommerceProductHandler
      * @return string|void
      */
     public function add_heading_to_additional_field($no_html, $key, $args, $value) {
-        if ('heading' === $args['type']) {
+        $booking = ( function_exists('WC') && WC()->session ) ? (array) WC()->session->get('booking', []) : [];
+
+        if ('heading' === $args['type'] && $booking['person_count'] > 1) {
             $html = '
-            <h3 class="mt-3">' . __("Begleitpersonen", "woocommerce") . '</h3>
-            <p>' . __("Hier könnt ihr bereits vorab Informationen zu eurer / n Begleitperson / en hinterlegen, um eine Wartezeit bei der Anmeldung vorzubeugen.", "woocommerce") . '</p>
+                <h3 class="mt-3">' . __("Begleitpersonen", "woocommerce") . '</h3>
+                <p>' . __("Hier könnt ihr bereits vorab Informationen zu eurer / n Begleitperson / en hinterlegen, um eine Wartezeit bei der Anmeldung vorzubeugen.", "woocommerce") . '</p>
             ';
 
             return $html;

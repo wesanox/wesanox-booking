@@ -83,37 +83,27 @@ class ElementBookingDuration
 
         $data = $this->service_get_times->wesanox_get_available_times($day);
 
-        $available_times = [];
+        $closing_time_str = $this->service_get_times->get_opening_window($day)['opening_to'] ?? '24:00:00';
 
-        for ($i = 1; $i <= 9; $i++) {
-            if (isset($data[(string)$i]) && !empty($data[(string)$i])) {
-                $available_times = $data[(string)$i];
+        $closing_edge_ts = ($closing_time_str === '23:59:59')
+            ? strtotime(date('Y-m-d', $start_timestamp) . ' 24:00:00')
+            : strtotime(date('Y-m-d', $start_timestamp) . ' ' . $closing_time_str);
+
+        $html_option = '';
+        for ($hours = 2; $hours <= 5; $hours++) {
+            $end_ts = strtotime("+{$hours} hours", $start_timestamp);
+
+            if ($end_ts > $closing_edge_ts) {
                 break;
             }
-        }
 
-        if (empty($available_times)) {
-            return;
-        }
-
-        $last_time = end($available_times);
-        $closure_hour = (int)substr($last_time, 0, 2) + 2;
-
-        $closure_timestamp = strtotime(date('Y-m-d', $start_timestamp) . " {$closure_hour}:00:00");
-
-        $remaining_minutes_today = ($closure_timestamp - $start_timestamp) / 60;
-        $max_hours = floor($remaining_minutes_today / 60);
-
-        for ($i = 2; $i <= min(5, $max_hours); $i++) {
-            $option_date_time = strtotime("+$i hours", $start_timestamp);
-
-            if (date('Y-m-d', $option_date_time) !== date('Y-m-d', $start_timestamp)) {
-                $option_date_time = strtotime(date('Y-m-d', $start_timestamp) . ' 23:59:59');
+            $label_end = date('H:i', $end_ts);
+            if (date('H:i', $end_ts) === '00:00') {
+                $label_end = '24:00';
             }
 
-            $formatted_option = date('H:i', $option_date_time);
-            $selected = ($i == 3) ? ' selected' : '';
-            $html_option .= '<option value="' . $formatted_option . '"' . $selected . '>' . $i . ' Stunden</option>';
+            $selected = ($hours === 3) ? ' selected' : '';
+            $html_option .= '<option value="' . $label_end . '"' . $selected . '>' . $hours . ' Stunden</option>';
         }
 
         $html = '<select>' . $html_option . '</select>';
@@ -124,5 +114,9 @@ class ElementBookingDuration
         );
 
         wp_send_json($response);
+    }
+
+    private function search_booking($start_time) {
+
     }
 }

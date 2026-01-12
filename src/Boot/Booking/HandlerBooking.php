@@ -19,15 +19,14 @@ class HandlerBooking
             return 'Ungültige Bestellung.';
         }
 
-        // Direktes Abrufen der Metadaten
         $start_time = $order->get_meta('Startzeit', true);
         $end_time = $order->get_meta('Endzeit', true);
-        $coupon = $order->get_meta('Gutscheinverkauf', true);
+        $coupon =  $this->order_contains_product($order, 2807);
 
         if ($coupon) {
             $response = $this->api_call_requests('handle-orders?orderId=' . $order_id);
         } else if (!$start_time || !$end_time) {
-            $to = 'wester@mediamus.de';
+            $to = 'wester@mediamus.de, sandra@emsland-camping.de, melissa@emsland-camping.de';
             $subject = 'FEHLER BEI BESTELLUNG ' . $order_id;
             $message = 'Die Bestellung mit der ID ' . $order_id . ' fehlt die Startzeit oder Endzeit.';
             $headers = array('Content-Type: text/html; charset=UTF-8');
@@ -56,7 +55,7 @@ class HandlerBooking
         if (!is_plugin_active('medi-api-tool/medi-api-tool.php')) {
             error_log('medi-api-tool ist nicht aktiv. API-Aufruf kann nicht ausgeführt werden.');
 
-            return new WP_Error('plugin_inactive', 'medi-api-tool ist nicht aktiv');
+            return new \WP_Error('plugin_inactive', 'medi-api-tool ist nicht aktiv');
         }
 
         $booking_api_id = $wpdb->get_var("SELECT booking_api_id FROM " . $wpdb->prefix . "medi_booking_table WHERE id = 1");
@@ -64,7 +63,7 @@ class HandlerBooking
         if (!$booking_api_id) {
             error_log('Keine API-ID gefunden.');
 
-            return new WP_Error('missing_api_id', 'Keine API-ID gefunden');
+            return new \WP_Error('missing_api_id', 'Keine API-ID gefunden');
         }
 
         $api_info = $wpdb->get_row($wpdb->prepare(
@@ -75,7 +74,7 @@ class HandlerBooking
         if (!$api_info) {
             error_log('API-Informationen konnten nicht abgerufen werden.');
 
-            return new WP_Error('missing_api_info', 'API-Informationen konnten nicht abgerufen werden');
+            return new \WP_Error('missing_api_info', 'API-Informationen konnten nicht abgerufen werden');
         }
 
         $url = $api_info->api_url . $urlSection;
@@ -102,9 +101,19 @@ class HandlerBooking
         if ($status_code !== 200) {
             error_log('API-Antwort war nicht erfolgreich. Statuscode: ' . $status_code);
 
-            return new WP_Error('api_error', 'API-Antwort war nicht erfolgreich. Statuscode: ' . $status_code);
+            return new \WP_Error('api_error', 'API-Antwort war nicht erfolgreich. Statuscode: ' . $status_code);
         }
 
         return json_decode(wp_remote_retrieve_body($response), true);
+    }
+
+    private function order_contains_product( $order, $product_id ) : bool
+    {
+        foreach ( $order->get_items() as $item ) {
+            if ( (int) $item->get_product_id() === (int) $product_id ) {
+                return true;
+            }
+        }
+        return false;
     }
 }

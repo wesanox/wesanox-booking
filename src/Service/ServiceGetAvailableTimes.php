@@ -2,45 +2,49 @@
 
 namespace Wesanox\Booking\Service;
 
-defined( 'ABSPATH' )|| exit;
+defined('ABSPATH') || exit;
 
 use DateTime;
 
 class ServiceGetAvailableTimes
 {
-    public static function wesanox_get_available_times($inputDate): array
+    /**
+     * @param string $inputDate
+     * @return array|true[]
+     * @throws \DateMalformedStringException
+     */
+    public static function get_opening_window(string $inputDate): array
     {
         global $wpdb;
 
-        $tz = wp_timezone();
-        $now = new DateTime('now', $tz);
+        $tz    = wp_timezone();
+        $now   = new DateTime('now', $tz);
         $today = (new DateTime('now', $tz))->format('Y-m-d');
 
         $holidays_table = $wpdb->prefix . 'wesanox_holidays';
+        $rates_table    = $wpdb->prefix . 'wesanox_rates';
 
+        // Holiday-Override
         $holiday = $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT opening_from, opening_to, opening_closed, opening_holiday
+                "SELECT opening_from, opening_to, opening_closed
                  FROM {$holidays_table}
                  WHERE opening_date = %s
                  LIMIT 1",
-                 $inputDate
+                $inputDate
             )
         );
 
-        if ( $holiday ) {
-            if ( (int) $holiday->opening_closed === 1 ) {
-                return ['closed' => 1];
+        if ($holiday) {
+            if ((int)$holiday->opening_closed === 1) {
+                return ['closed' => true];
             }
-
             $openingFrom = $holiday->opening_from ?: '10:00';
-            $openingTo = $holiday->opening_to   ?: '24:00';
+            $openingTo   = $holiday->opening_to   ?: '24:00';
         } else {
-            $rates_table = $wpdb->prefix . 'wesanox_rates';
+            // Fallback auf Raten / Standardzeiten
+            $currentDay = (int) wp_date('N', strtotime($inputDate), $tz);
 
-            $currentDay  = (int) wp_date('N', strtotime($inputDate), $tz);
-
-            // Hole früheste Startzeit & späteste Endzeit für den Tag
             $rates_row = $wpdb->get_row(
                 $wpdb->prepare(
                     "SELECT MIN(rate_time_from) AS from_min, MAX(rate_time_to) AS to_max
@@ -50,7 +54,7 @@ class ServiceGetAvailableTimes
                 )
             );
 
-            if ( $rates_row && ($rates_row->from_min || $rates_row->to_max) ) {
+            if ($rates_row && ($rates_row->from_min || $rates_row->to_max)) {
                 $openingFrom = $rates_row->from_min ?: '10:00';
                 $openingTo   = $rates_row->to_max   ?: '24:00';
             } else {
@@ -83,95 +87,139 @@ class ServiceGetAvailableTimes
         }
 
         if ($startTime === false || $startTime >= $openingToNorm) {
-            return [];
+            return ['closed' => true];
         }
 
-        $rooms_table = $wpdb->prefix . 'wesanox_rooms';
+        return [
+            'closed'        => false,
+            'opening_from'  => $openingFrom,
+            'opening_to'    => $openingToNorm,
+            'start_time'    => $startTime,
+        ];
+    }
+
+    /**
+     * @param string $inputDate
+     * @param string $openingFrom
+     * @param string $openingToNorm
+     * @param int $minSlots
+     * @return array
+     * @throws \DateMalformedStringException
+     */
+    public static function get_union_available_times(string $inputDate, string $openingFrom, string $openingToNorm, int $minSlots = 8): array
+    {
+        global $wpdb;
+
+        $tz             = wp_timezone();
+        $rooms_table    = $wpdb->prefix . 'wesanox_rooms';
         $bookings_table = $wpdb->prefix . 'wesanox_bookings';
+        $orders_table   = $wpdb->prefix . 'wc_orders';
 
-        // Räume, die online aktiv sind
-        $rooms = $wpdb->get_results(
-            "SELECT id
-             FROM {$rooms_table}
-             WHERE room_inactive = 0"
-        );
+        $rooms = $wpdb->get_results("
+            SELECT id
+            FROM {$rooms_table}
+            WHERE room_inactive = 0
+        ");
 
-        $excluded_post_statuses = ['wc-cancelled','wc-completed','wc-refunded','wc-failed','trash'];
+        if (empty($rooms)) return [];
+
+        $excluded_post_statuses = ['wc-cancelled','wc-refunded','wc-failed','trash'];
         $placeholders = implode(',', array_fill(0, count($excluded_post_statuses), '%s'));
 
         $bookings = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT b.room_id, b.booking_from, b.booking_to
                  FROM {$bookings_table} b
-                 LEFT JOIN {$wpdb->posts} p ON p.ID = b.wc_order_id
+                 LEFT JOIN {$orders_table} p ON p.ID = b.wc_order_id
                  WHERE b.booking_date = %s
-                   AND (p.ID IS NULL OR p.post_status NOT IN ($placeholders))",
+                   AND (p.ID IS NULL OR p.status NOT IN ($placeholders))",
                 array_merge([$inputDate], $excluded_post_statuses)
             )
         );
 
+        $timesBase = self::generateTimeSlots($openingFrom, $openingToNorm);
+
         $availableTimes = [];
-
-        $timesBase = self::generateTimeSlots($startTime, $openingToNorm);
-
         foreach ($rooms as $room) {
             $times = $timesBase;
 
             foreach ($bookings as $b) {
-                if ((int)$b->room_id !== (int)$room->id) {
-                    continue;
-                }
+                if ((int)$b->room_id !== (int)$room->id) continue;
 
+                // Deine aktuelle Pufferlogik: -30 / +30
                 $startDT   = new DateTime($b->booking_from, $tz);
-                $endDT     = new DateTime($b->booking_to,   $tz);
-                $closingTS = strtotime($openingToNorm); // 'H:i:s' / 'H:i' → gleiches Format wie unten
+                $closingTS = strtotime($openingToNorm);
 
-                $adjustedStartTime = $startDT->modify('-145 minutes')->format('H:i:s');
+                $adjustedStartTime = $startDT->modify('-30 minutes')->format('H:i:s');
 
                 $tmpEnd = new DateTime($b->booking_to, $tz);
                 if (strtotime($tmpEnd->format('H:i:s')) < $closingTS) {
                     $tmpEnd->modify('+30 minutes');
                 }
-
                 $endOnly = $tmpEnd->format('H:i:s');
-
                 if (strtotime($endOnly) > $closingTS || $endOnly === '00:00:00') {
-                    $endOnly = $openingToNorm; // z.B. 23:59:59
+                    $endOnly = $openingToNorm;
                 }
 
-                $adjustedEndTime = $endOnly;
-
-                $times = self::removeBookedTimes($times, $adjustedStartTime, $adjustedEndTime);
+                $times = self::removeBookedTimes($times, $adjustedStartTime, $endOnly);
             }
 
-
-            $availableTimes[$room->id] = self::filterTimeSlots($times, 1, $openingToNorm);
+            $availableTimes[$room->id] = self::filterTimeSlots($times, $minSlots, $openingToNorm);
         }
 
+        $unionSet = [];
+        foreach ($availableTimes as $times) {
+            foreach ($times as $t) $unionSet[$t] = true;
+        }
+        $unionTimes = array_keys($unionSet);
+        sort($unionTimes, SORT_STRING);
+
+        // Lead-Key (wie bisher): Raum mit den meisten Slots
         uasort($availableTimes, function ($a, $b) {
             return count($b) - count($a);
         });
-
-        foreach ($availableTimes as $roomId => $times) {
-            if (!empty($times)) {
-                return [$roomId => $times];
-            }
+        if (!empty($unionTimes)) {
+            $roomIds = array_keys($availableTimes);
+            $firstRoomId = reset($roomIds);
+            return [$firstRoomId => $unionTimes];
         }
-
         return [];
     }
 
-    /** "24:00" -> "23:59:59" für strtotime-Kompatibilität */
+    /**
+     * @param string $inputDate
+     * @return array|int[]
+     * @throws \DateMalformedStringException
+     */
+    public static function wesanox_get_available_times(string $inputDate): array
+    {
+        $ow = self::get_opening_window($inputDate);
+        if ($ow['closed'] ?? false) return ['closed' => 1];
+
+        return self::get_union_available_times(
+            $inputDate,
+            $ow['start_time'],
+            $ow['opening_to'],
+            8
+        );
+    }
+
+    /**
+     * @param $time
+     * @return string
+     */
     private static function normalize_upper_time($time)
     {
         $t = trim($time);
-        if ($t === '24:00' || $t === '24:00:00') {
-            return '23:59:59';
-        }
+        if ($t === '24:00' || $t === '24:00:00') return '23:59:59';
         return $t;
     }
 
-    /** Rundet auf das nächste 15-Min-Fenster, begrenzt auf 22:15 */
+    /**
+     * @param DateTime $time
+     * @return false|string
+     * @throws \DateMalformedStringException
+     */
     private static function roundToNextQuarterHour(DateTime $time)
     {
         $minutes = (int)$time->format('i');
@@ -192,7 +240,11 @@ class ServiceGetAvailableTimes
         return $time->format('H:i');
     }
 
-    /** Zeitslots generieren (15-Minuten) */
+    /**
+     * @param $start
+     * @param $end
+     * @return array
+     */
     private static function generateTimeSlots($start, $end)
     {
         $times = [];
@@ -209,11 +261,16 @@ class ServiceGetAvailableTimes
         return $times;
     }
 
-    /** Gebuchte Zeiten (inkl. Puffer) entfernen */
+    /**
+     * @param $times
+     * @param $start
+     * @param $end
+     * @return array
+     */
     private static function removeBookedTimes($times, $start, $end)
     {
         $startTs = strtotime($start);
-        $endTs = strtotime($end);
+        $endTs   = strtotime($end);
 
         $filtered = array_filter($times, function($t) use ($startTs, $endTs) {
             $ts = strtotime($t);
@@ -223,7 +280,12 @@ class ServiceGetAvailableTimes
         return array_values($filtered);
     }
 
-    /** Nur gültige Startzeiten bis (closing - 2h + 15m) und vor 22:15 */
+    /**
+     * @param $times
+     * @param $minSlots
+     * @param $closingTime
+     * @return array
+     */
     private static function filterTimeSlots($times, $minSlots, $closingTime)
     {
         $filtered = [];
@@ -231,22 +293,18 @@ class ServiceGetAvailableTimes
         if ($count === 0) return $filtered;
 
         $slotLength = 15 * 60;
-        $duration = $minSlots * $slotLength;
+        $duration   = $minSlots * $slotLength;
 
         $closingTs = strtotime($closingTime);
-
         $latestByClosing = $closingTs - $duration;
 
+        // Falls ihr auch nach 22:00 öffnet, entferne die Hardcap-Zeile:
         $latestHardCap = strtotime('22:00');
-
         $latestStartTs = min($latestByClosing, $latestHardCap);
 
         for ($i = 0; $i < $count; $i++) {
             $startTs = strtotime($times[$i]);
-
-            if ($startTs > $latestStartTs) {
-                break;
-            }
+            if ($startTs > $latestStartTs) break;
 
             $ok = true;
             for ($j = 1; $j < $minSlots; $j++) {
@@ -254,9 +312,7 @@ class ServiceGetAvailableTimes
                 if (strtotime($times[$i + $j]) !== $startTs + ($j * $slotLength)) { $ok = false; break; }
             }
 
-            if ($ok) {
-                $filtered[] = $times[$i];
-            }
+            if ($ok) $filtered[] = $times[$i];
         }
 
         return $filtered;

@@ -39,29 +39,36 @@ class ElementBookingExtras
 
         $extra_loop = new WP_Query($extra);
 
+        $cart_product_ids   = [];
+        $cart_variation_ids = [];
+
+        if ( WC()->cart ) {
+            foreach ( WC()->cart->get_cart() as $cart_item ) {
+                $cart_product_ids[] = (int) $cart_item['product_id'];
+                if ( ! empty($cart_item['variation_id']) ) {
+                    $cart_variation_ids[] = (int) $cart_item['variation_id'];
+                }
+            }
+        }
+
+        $cart_product_ids   = array_unique($cart_product_ids);
+        $cart_variation_ids = array_unique($cart_variation_ids);
+
         while ($extra_loop->have_posts()) {
             $extra_loop->the_post();
 
             global $product;
 
-            $booking = ( function_exists('WC') && WC()->session ) ? WC()->session->get('booking', []) : [];
-
-            $extras = (isset($booking['extras']) && !is_array($booking['extras'])) ? json_decode($booking['extras']) : '';
             $product_id = $product->get_id();
 
-            if(is_array($extras)) {
-                foreach ($extras as $select) {
-                    if($product_id == $select->product_id) {
-                        $css_class = ' active';
-                        $modal_content = ' data-bs-target="#product_modal_' . $product_id . '"';
-                    } else {
-                        $css_class = '';
-                        $modal_content = ' data-bs-toggle="modal" data-bs-target="#product_modal_' . $product_id . '"';
-                    }
-                }
-            } else {
-                $css_class = '';
-                $modal_content = ' data-bs-toggle="modal" data-bs-target="#product_modal_' . $product_id . '"';
+            $css_class = '';
+            $modal_content = ' data-bs-toggle="modal" data-bs-target="#product_modal_' . $product_id . '"';
+
+            $in_cart = in_array((int) $product_id, $cart_product_ids, true) || in_array((int) $product_id, $cart_variation_ids, true);
+
+            if ( $in_cart ) {
+                $css_class = ' active';
+                $modal_content = ' data-bs-target="#product_modal_' . $product_id . '"';
             }
 
             $image_id = $product->get_image_id();
@@ -69,7 +76,7 @@ class ElementBookingExtras
 
             $terms = get_the_terms($product->get_id(), 'product_cat');
 
-            $person_content = ( $product_id != 95 && $product_id != 96) ? ' pro Person': ' für 2 Personen';
+            $person_content = ( get_post_meta($product_id, '_veen_spa_option_1', true) !== '2') ? ' pro Person': ' für 2 Personen';
 
             if (!empty($terms) && !is_wp_error($terms)) {
                 foreach ($terms as $term) {
@@ -147,60 +154,49 @@ class ElementBookingExtras
 
     public function wesanox_ajax_element_booking_extras(): void
     {
-        $product_id = intval(sanitize_text_field($_POST['product_id']));
+        $product_id = intval($_POST['product_id']);
+        $product = wc_get_product($product_id);
         $person_count = intval(sanitize_text_field($_POST['person_count']));
-        $variation  = wc_get_product($product_id);
+        $html = '';
 
-        if (!$variation ) {
-            wp_send_json_error('Product not found' . $product_id);
+        if ( ! $product || ! $product->is_type('variable') ) {
+            wp_send_json_error('Kein variables Produkt');
             exit;
         }
 
-        $attributes = $variation->get_attributes();
+        if( get_post_meta($product_id, '_veen_spa_option_1', true) != '2' ) {
+            $html_attr = '<select class="product_attributes">';
 
-        if (!empty($attributes)) {
-            $html_attr = '';
+            foreach($product->get_available_variations() as $variation) {
+                $html_attr .= '<option value="' . esc_html($variation["variation_id"]) . '">' . esc_html($variation["attributes"]["attribute_variante"]) . '</option>';
+            }
 
-            if( get_post_meta($product_id, '_veen_spa_option_1', true) != '2' ) {
-                foreach ($attributes as $attribute) {
-                    $html_attr .= '<select class="product_attributes">';
+            $html_attr .= '</select>';
 
-                    foreach ($attribute->get_options() as $attr) {
-                        $html_attr .= '<option value="' . esc_html($attr) . '">' . esc_html($attr) . '</option>';
-                    }
+            $j = 1;
 
-                    $html_attr .= '</select>';
-                }
+            for ($i = 0; $i < $person_count; $i++) {
+                $html .= '
+                    <div class="row my-3">
+                        <div class="col-4 d-flex align-items-center">' . $j . ' Person : </div>
+                        <div class="col-8">' . $html_attr . '</div>
+                    </div>';
 
-                $j = 1;
+                $j++;
+            }
+        } else {
+            foreach ($product->get_available_variations() as $key => $variation) {
+                $checked = ($key == 0) ? '  checked' : '';
 
-                for ($i = 0; $i < $person_count; $i++) {
-                    $html .= '
-                        <div class="row my-3">
-                            <div class="col-4 d-flex align-items-center">' . $j . ' Person : </div>
-                            <div class="col-8">' . $html_attr . '</div>
-                        </div>';
-
-                    $j++;
-                }
-            } else {
-                foreach ($attributes as $attribute) {
-
-                    foreach ($attribute->get_options() as $key => $attr) {
-                        $checked = ($key == 0) ? '  checked' : '';
-
-                        $html .= '
-                        <div class="form-check d-flex align-items-center gap-2 mb-2 h5">
-                            <input class="form-check-input" type="radio" name="attribute_radio_' . $product_id . '" value="' . esc_html($attr) . '"' . $checked . '>
-                            <label class="form-check-label" for="radio_' . esc_html($attr) . '">
-                                ' . esc_html($attr) . '
-                            </label>
-                        </div>';
-                    }
-                }
+                $html .= '
+                    <div class="form-check d-flex align-items-center gap-2 mb-2 h5">
+                        <input class="form-check-input" type="radio" name="attribute_radio_' . $product_id . '" value="' . esc_html($variation["variation_id"]) . '"' . $checked . '>
+                        <label class="form-check-label" for="radio_' . esc_html($variation["variation_id"]) . '">
+                            ' . esc_html($variation["attributes"]["attribute_varianten"]) . '
+                        </label>
+                    </div>';
             }
         }
-
 
         $response = array(
             'message' => 'AJAX-Request erfolgreich abgefangen',

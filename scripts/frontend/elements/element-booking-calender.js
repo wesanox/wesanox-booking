@@ -2,6 +2,11 @@ jQuery(document).ready(function($) {
     const CAL  = '#calendar';
     const BTN  = '#count-days-btn';
 
+    $('body').on('click', '#check-in-out-box-back', function() {
+        $('#element-booking-calender').removeClass('d-none');
+        $('#element-booking-time').addClass('d-none');
+    });
+
     $(CAL).zabuto_calendar({
         header_format: "[month] [year]",
         show_days: true,
@@ -121,6 +126,10 @@ function ajaxBookingTime(day) {
             } else {
                 jQuery('#booking-time-box').html('<div class="col-12 p-2 text-center text-muted">Keine Zeiten gefunden.</div>');
                 jQuery('#element-booking-time').removeClass('d-none');
+            }
+
+            if (jQuery(window).width() < 765) {
+                jQuery('#element-booking-calender').addClass('d-none');
             }
         })
         .fail(function () {

@@ -206,12 +206,18 @@ jQuery(document).ready(function($) {
         }, 1000);
     }
 
-    if ($("#wesanox-booking").length || $('#wesanox-booking-card').length) {
+    if ($("#wesanox-booking").length || $('#wesanox-booking-card').length || $('#wesanox-booking-checkout').length) {
         const a = getActivity();
+
         if (a) {
-            startTimerFrom(a);
+            const expiry = a + TTL_MS;
+
+            if (now() >= expiry) {
+                onExpire();
+            } else {
+                startTimerFrom(a);
+            }
         } else {
-            // Erst beim Wechsel auf Step 2 starten
             $('body').on('click', 'a.active', function () {
                 const step = Number($(this).attr('step'));
                 if (step === 2) {

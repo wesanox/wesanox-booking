@@ -108,7 +108,7 @@ class ElementBookingModal
                                         </div>
                                     </div>
                                     <div class="modal-footer">
-                                        <button type="button" class="btn btn-primary add-var-to-cart-btn" data-bs-dismiss="modal"  data-variation_id="' . $product->get_id() . '">wählen</button>
+                                        <button type="button" class="btn btn-primary add-var-to-cart-btn" data-bs-dismiss="modal" data-product_id="' . $product->get_id() . '">wählen</button>
                                     </div>
                                 </div>
                             </div>

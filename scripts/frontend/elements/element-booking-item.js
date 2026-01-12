@@ -1,4 +1,16 @@
 jQuery(document).ready(function($){
+    $('body').on('click', '.show-settings', function() {
+        let show_class = $(this).data('box');
+
+        $('.' + show_class).toggleClass('d-none');
+    });
+
+    $('body').on('click', '.btn-settings-close', function() {
+        let show_class = $(this).data('box');
+
+        $('.' + show_class).addClass('d-none');
+    });
+
     $("body").on('click', '.get-product_id', function() {
         let elementId = $(this).attr('id');
         let product_id = 0;

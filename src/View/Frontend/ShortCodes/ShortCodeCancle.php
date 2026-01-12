@@ -120,30 +120,18 @@ class ShortCodeCancle
             exit;
         }
 
-        $allowed_statuses = apply_filters('woocommerce_valid_order_statuses_for_cancel', array('pending', 'processing'), $order);
+        $allowed_statuses = array( 'pending', 'processing' );
 
-        if (!in_array($order->get_status(), $allowed_statuses, true)) {
-            wc_add_notice(__('Diese Bestellung kann nicht mehr storniert werden.', 'textdomain'), 'notice');
-            wp_safe_redirect(wc_get_account_endpoint_url('orders'));
+        if ( ! in_array( $order->get_status(), $allowed_statuses, true ) ) {
+            wc_add_notice( __( 'Diese Bestellung kann nicht mehr storniert werden.', 'textdomain' ), 'notice' );
+            wp_safe_redirect( wc_get_account_endpoint_url('orders') );
             exit;
         }
 
-        $redirect_after = wc_get_account_endpoint_url('orders');
+        $order->update_status( 'cancelled', __( 'Bestellung vom Kunden storniert.', 'textdomain' ) );
+        wc_add_notice( __( 'Deine Bestellung wurde storniert.', 'textdomain' ), 'success' );
 
-        $cancel_endpoint = wc_get_page_permalink('cart');
-        $cancel_url = add_query_arg(
-            array(
-                'cancel_order' => 'true',
-                'order' => $order->get_order_key(),
-                'order_id' => $order->get_id(),
-                'redirect' => urlencode($redirect_after),
-            ),
-            $cancel_endpoint
-        );
-
-        $cancel_url = wp_nonce_url($cancel_url, 'woocommerce-cancel_order');
-
-        wp_safe_redirect($cancel_url);
+        wp_safe_redirect( wc_get_account_endpoint_url('orders') );
         exit;
     }
 

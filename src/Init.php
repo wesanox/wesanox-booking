@@ -11,11 +11,14 @@ use Wesanox\Booking\View\Frontend\ShortCodes\ShortCodeCancle;
 use Wesanox\Booking\View\Frontend\ShortCodes\ShortCodeUpsell;
 use Wesanox\Booking\Woocommerce\WoocommerceProductHandler;
 use Wesanox\Booking\Boot\Booking\HandlerBooking;
+use Wesanox\Booking\Service\Api\ServiceApi;
 
 class Init
 {
     public function __construct()
     {
+        ServiceApi::boot();
+
         new AdminViewController();
 
         new AreaHelper();

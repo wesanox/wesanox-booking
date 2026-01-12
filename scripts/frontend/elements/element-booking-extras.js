@@ -8,6 +8,7 @@ jQuery(function($){
         changeCount(s.person_count, 95);
         changeCount(s.person_count, 96);
     }
+
     function upsertExtra(extras, item) {
         const idx = extras.findIndex(x => Number(x.product_id) === Number(item.product_id));
         if (idx >= 0) extras[idx] = { ...extras[idx], ...item };
@@ -34,42 +35,25 @@ jQuery(function($){
 
         const s = bookingStore.get();
 
-        const variation_id = Number($(this).data('variation_id'));
-        const product_id   = variation_id;
-        const person_count = Number(s.person_count) || 1;
-        const qty_basic    = getQtyBasicFallback();
+        const product_id = Number($(this).data('product_id'));
+        const modal_id = '#product_modal_' + product_id;
+        const checked_radio = $(modal_id + ' input[type=radio]:checked');
+        const variation_ids = [];
+        const person_count = $('.person-count').length ? Number($('.person-count').attr('value')) : 1;
 
-        const modalId = '#product_modal_' + product_id;
-        let attrs = {};
-
-        if (product_id === 95 || product_id === 96) {
-            const val = $(`${modalId} input[type=radio]:checked`).val();
-            attrs = { option: val ?? null };
-        } else {
-            let key = 0;
-            $(`${modalId} select`).each(function(){
-                key++;
-                const attrKey = 'person_' + key;
-                attrs[attrKey] = $('option:selected', this).val();
-            });
-        }
-
-        const nextExtras = upsertExtra([...(s.extras || [])], {
-            product_id,
-            variation_id,
-            qty_basic,
-            person_count,
-            attrs
+        $(modal_id + ' select').each(function () {
+            variation_ids.push($(this).val());
         });
 
-        bookingStore.set({ extras: nextExtras });
+        if (checked_radio.length) {
+            variation_ids.push(checked_radio.val());
+        }
 
         const payload = {
             action: 'add_variation_to_cart',
-            variation_id: variation_id,
+            product_id: product_id,
+            variation_ids: variation_ids,
             quantity: person_count,
-            quant: qty_basic,
-            extras: JSON.stringify(nextExtras)
         };
 
         $.post(ajax_object_extras.ajax_url_extras, payload, function (response) {
@@ -91,10 +75,6 @@ jQuery(function($){
             if (!$(this).hasClass('active')) return;
 
             const product_id = Number($(this).attr('value-product'));
-            const s = bookingStore.get();
-
-            const nextExtras = removeExtra([...(s.extras || [])], product_id);
-            bookingStore.set({ extras: nextExtras });
 
             const data = {
                 url: '/wp-admin/admin-ajax.php?wc-ajax=remove_product_from_cart',
@@ -105,10 +85,6 @@ jQuery(function($){
             $.post(ajax_object_extras.ajax_url_extras, data, function(){
                 const $box = $('#extra-box-select-' + product_id);
                 $box.attr('data-bs-toggle', 'modal').removeClass('active');
-
-                // Preis neu holen – falls vorhanden
-                // const qty_basic = getQtyBasicFallback();
-                // getPrice( s.product_id, nextExtras.map(x => x.product_id), s.person_count, qty_basic );
             });
         });
     });
@@ -118,25 +94,15 @@ jQuery(function($){
 
         const link = $(this);
         const product_id = Number(link.data('product_id'));
-        const cartItemKey = link.data('cart_item_key') || link.attr('data-cart_item_key');
 
-        const s = bookingStore.get();
-        const nextExtras = removeExtra([...(s.extras || [])], product_id);
-        bookingStore.set({ extras: nextExtras });
+        const data = {
+            url: '/wp-admin/admin-ajax.php?wc-ajax=remove_product_from_cart',
+            action: 'remove_product_from_cart',
+            product_id: product_id
+        };
 
-        $.post(ajax_object_extras.ajax_url_extras, {
-            action: 'wesanox_update_booking_session',
-            extras: JSON.stringify(nextExtras),
-        }, function(res){
-            const data = {
-                url: '/wp-admin/admin-ajax.php?wc-ajax=remove_product_from_cart',
-                action: 'remove_product_from_cart',
-                product_id: product_id
-            };
-
-            $.post(ajax_object_extras.ajax_url_extras, data, function(){
-                window.location.href = link.attr('href');
-            });
+        $.post(ajax_object_extras.ajax_url_extras, data, function () {
+            window.location.href = link.attr('href');
         });
     });
 
