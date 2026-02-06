@@ -196,12 +196,22 @@ class ServiceGetAvailableTimes
         $ow = self::get_opening_window($inputDate);
         if ($ow['closed'] ?? false) return ['closed' => 1];
 
-        return self::get_union_available_times(
-            $inputDate,
-            $ow['start_time'],
-            $ow['opening_to'],
-            8
-        );
+        if ( $ow['opening_to'] == "23:59:00") {
+            return self::get_union_available_times(
+                $inputDate,
+                $ow['start_time'],
+                $ow['opening_to'],
+                7
+            );
+        } else {
+            return self::get_union_available_times(
+                $inputDate,
+                $ow['start_time'],
+                $ow['opening_to'],
+                8
+            );
+        }
+
     }
 
     /**

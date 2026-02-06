@@ -73,15 +73,12 @@ class ElementBookingDuration
             $datetime = date('Y-m-d H:i:s');
         }
 
-        $html_option = '';
         $start_timestamp = strtotime($datetime);
 
         if ($start_timestamp === false) {
             wp_send_json(array('message' => 'Ungültiges Startdatum'));
             return;
         }
-
-        $data = $this->service_get_times->wesanox_get_available_times($day);
 
         $closing_time_str = $this->service_get_times->get_opening_window($day)['opening_to'] ?? '24:00:00';
 
@@ -90,14 +87,21 @@ class ElementBookingDuration
             : strtotime(date('Y-m-d', $start_timestamp) . ' ' . $closing_time_str);
 
         $html_option = '';
+
         for ($hours = 2; $hours <= 5; $hours++) {
             $end_ts = strtotime("+{$hours} hours", $start_timestamp);
 
-            if ($end_ts > $closing_edge_ts) {
+            if ($end_ts > $closing_edge_ts && $datetime != '22:00') {
+                break;
+            }
+
+            if($datetime == '22:00') {
+                $html_option .= '<option value="24:00" selected>2 Stunden</option>';
                 break;
             }
 
             $label_end = date('H:i', $end_ts);
+
             if (date('H:i', $end_ts) === '00:00') {
                 $label_end = '24:00';
             }
