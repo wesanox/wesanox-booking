@@ -54,10 +54,25 @@ jQuery(function($){
             product_id: product_id,
             variation_ids: variation_ids,
             quantity: person_count,
+            nonce: ajax_object_extras.nonce,
         };
 
         $.post(ajax_object_extras.ajax_url_extras, payload, function (response) {
+            if (!response || response.success === false) {
+                console.error('Fehler beim Hinzufügen der Variation:', response);
+                return;
+            }
+
             $('#message').removeClass('d-none').html('Variation zum Warenkorb hinzugefügt!');
+
+            // Keep bookingStore.extras in sync so store_booking_payload carries them to WC session
+            const currentExtras = bookingStore.get().extras || [];
+            const updatedExtras = upsertExtra(currentExtras, { product_id: product_id, variation_ids: variation_ids });
+            bookingStore.set({ extras: updatedExtras });
+
+            if (typeof syncBookingToServer === 'function') {
+                syncBookingToServer();
+            }
 
             const $box = $('#extra-box-select-' + product_id);
             $box.addClass('active').removeAttr('data-bs-toggle');

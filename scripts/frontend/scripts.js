@@ -16,6 +16,7 @@ const bookingStore = (() => {
         stop_time: null,
         product_id: null,
         extras: [],
+        area_id: 0,
     };
 
     let state = { ...defaultState };
@@ -56,7 +57,17 @@ const bookingStore = (() => {
     return { load, set, get, onChange, reset };
 })();
 
-document.addEventListener('DOMContentLoaded', bookingStore.load);
+document.addEventListener('DOMContentLoaded', function () {
+    bookingStore.load();
+    // Initialise area_id from the shortcode wrapper attribute (set via [booking_view area_id="X"]).
+    var wrapper = document.getElementById('wesanox-booking');
+    if (wrapper) {
+        var areaId = parseInt(wrapper.getAttribute('data-area-id') || '0', 10);
+        if (areaId > 0) {
+            bookingStore.set({ area_id: areaId });
+        }
+    }
+});
 
 /**
  * Check if the cart a empty / if not, display the cart icon

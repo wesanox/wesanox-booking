@@ -781,4 +781,286 @@
   }
 }
 
+/** ---- Multi-Step Booking Widgets (wsn-timeslot-widget / wsn-suite-widget) ---- **/
+
+/* Step indicator */
+.wsn-steps {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #EBF0F7;
+}
+
+.wsn-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 10px 0;
+  color: #aaa;
+  font-size: 0.85rem;
+  font-weight: 400;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+.wsn-step__num {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.wsn-step--active {
+  color: #1C3F5E;
+}
+
+.wsn-step--active .wsn-step__num {
+  background-color: #1C3F5E;
+  border-color: #1C3F5E;
+  color: white;
+}
+
+.wsn-step--done {
+  color: #1C3F5E;
+}
+
+.wsn-step--done .wsn-step__num {
+  background-color: #D9B341;
+  border-color: #D9B341;
+  color: #1C3F5E;
+}
+
+/* Panel navigation */
+.wsn-panel-nav {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Duration select */
+.wsn-duration-wrap select {
+  border: 1px solid #ccc;
+  padding: 7px 10px;
+  border-radius: 0;
+  font-size: 0.95rem;
+  height: 38px;
+  outline: none;
+  min-width: 180px;
+}
+
+.wsn-duration-wrap select:focus {
+  border-color: #1C3F5E;
+}
+
+/* Date label in time step */
+.wsn-date-label {
+  text-transform: uppercase;
+  color: #1C3F5E;
+  font-size: 1rem;
+}
+
+/* Product cards */
+.wsn-item-card {
+  min-width: 180px;
+  flex: 1;
+  border: 1px solid #EBF0F7;
+}
+
+.wsn-item-card h5 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.wsn-item-card__price {
+  font-size: 1.1rem;
+  color: #1C3F5E;
+  margin-bottom: 2px;
+}
+
+.wsn-item-card__unit {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #666;
+}
+
+/* Action field alignment */
+.wesanox-shortcode__field--action {
+  justify-content: flex-end;
+  padding-bottom: 0;
+}
+
+/* Nights label */
+.wsn-suite-nights-label {
+  text-transform: uppercase;
+  color: #1C3F5E;
+  font-size: 1rem;
+}
+
+@media only screen and (max-width: 576px) {
+  .wsn-step__label {
+    display: none;
+  }
+  .wsn-step {
+    padding-right: 8px;
+  }
+}
+
+/** ---- Shortcode Widgets (booking_suite / booking_timeslot) ---- **/
+
+.wesanox-shortcode {
+  font-weight: 300;
+  padding: 30px 0;
+}
+
+.wesanox-shortcode__title {
+  text-transform: uppercase;
+  color: #1C3F5E;
+  font-size: 1.45rem;
+  margin-bottom: 20px;
+}
+
+.wesanox-shortcode__fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.wesanox-shortcode__field {
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+}
+
+.wesanox-shortcode__field label {
+  font-size: 0.85rem;
+  color: #1C3F5E;
+  margin-bottom: 4px;
+  font-weight: 400;
+}
+
+.wesanox-shortcode__field label span[aria-hidden] {
+  color: #ff253a;
+}
+
+.wesanox-shortcode__field input[type="date"],
+.wesanox-shortcode__field input[type="time"],
+.wesanox-shortcode__field input[type="number"] {
+  border: 1px solid #ccc;
+  padding: 7px 10px;
+  font-size: 0.95rem;
+  border-radius: 0;
+  background-color: white;
+  color: #333;
+  height: 38px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.wesanox-shortcode__field input[type="date"]:focus,
+.wesanox-shortcode__field input[type="time"]:focus,
+.wesanox-shortcode__field input[type="number"]:focus {
+  border-color: #1C3F5E;
+}
+
+.wesanox-shortcode__field--checkbox {
+  justify-content: flex-end;
+  padding-bottom: 6px;
+}
+
+.wesanox-shortcode__field--checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.wesanox-shortcode__hint {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 3px;
+}
+
+.wesanox-shortcode__actions {
+  margin-top: 5px;
+}
+
+.wesanox-shortcode__loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 0;
+  color: #1C3F5E;
+}
+
+.wesanox-shortcode__spinner {
+  display: inline-block;
+  border: 4px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 4px solid #1C3F5E;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+.wesanox-shortcode__errors {
+  background-color: rgba(255, 37, 58, 0.08);
+  border-left: 3px solid #ff253a;
+  color: #c0001a;
+  padding: 12px 16px;
+  margin-top: 15px;
+  font-size: 0.9rem;
+}
+
+.wesanox-shortcode__errors ul {
+  margin: 0;
+  padding: 0 0 0 18px;
+}
+
+.wesanox-shortcode__errors li {
+  margin-bottom: 4px;
+}
+
+.wesanox-shortcode__result {
+  margin-top: 20px;
+  padding: 20px;
+  background: #EBF0F7;
+}
+
+.wesanox-suite-result__summary,
+.wesanox-timeslot-result__summary {
+  color: #1C3F5E;
+  font-size: 1.05rem;
+  margin-bottom: 15px;
+}
+
+.wesanox-suite-result__unavailable,
+.wesanox-timeslot-result__unavailable {
+  color: #666;
+}
+
+.wesanox-timeslot-result__reason {
+  margin: 0;
+}
+
+@media only screen and (max-width: 576px) {
+  .wesanox-shortcode__fields {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .wesanox-shortcode__field {
+    min-width: 100%;
+  }
+}
+
 /*# sourceMappingURL=styles.css.map */

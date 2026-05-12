@@ -8,12 +8,32 @@ use DateTime;
 
 class ServiceGetAvailableTimes
 {
+    /** ISO weekday number (1=Monday … 7=Sunday) → area_opening JSON key */
+    private const WEEKDAY_MAP = [
+        1 => 'monday',
+        2 => 'tuesday',
+        3 => 'wednesday',
+        4 => 'thursday',
+        5 => 'friday',
+        6 => 'saturday',
+        7 => 'sunday',
+    ];
+
     /**
-     * @param string $inputDate
-     * @return array|true[]
+     * Return the opening window for a given date.
+     *
+     * Priority:
+     *   1. Holiday override   (wesanox_holidays table, specific date)
+     *   2. Area opening       (area_opening JSON, weekday-based)
+     *   3. Rates fallback     (wesanox_rates table, weekday-based)
+     *   4. Hardcoded defaults
+     *
+     * @param string   $inputDate Y-m-d
+     * @param int|null $area_id   Specific area, or null to use the first area in DB.
+     * @return array{closed: bool, opening_from?: string, opening_to?: string, start_time?: string}
      * @throws \DateMalformedStringException
      */
-    public static function get_opening_window(string $inputDate): array
+    public static function get_opening_window(string $inputDate, ?int $area_id = null): array
     {
         global $wpdb;
 
@@ -24,52 +44,85 @@ class ServiceGetAvailableTimes
         $holidays_table = $wpdb->prefix . 'wesanox_holidays';
         $rates_table    = $wpdb->prefix . 'wesanox_rates';
 
-        // Holiday-Override
-        $holiday = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT opening_from, opening_to, opening_closed
-                 FROM {$holidays_table}
-                 WHERE opening_date = %s
-                 LIMIT 1",
-                $inputDate
-            )
-        );
+        // ------------------------------------------------------------------ //
+        // Priority 1: Holiday override — area-specific first, global (area_id IS NULL) as fallback.
+        // ------------------------------------------------------------------ //
+        $holiday = null;
+        if ($area_id !== null) {
+            $holiday = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT opening_from, opening_to, opening_closed
+                     FROM {$holidays_table}
+                     WHERE opening_date = %s AND area_id = %d
+                     LIMIT 1",
+                    $inputDate,
+                    $area_id
+                )
+            );
+        }
+        if (!$holiday) {
+            $holiday = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT opening_from, opening_to, opening_closed
+                     FROM {$holidays_table}
+                     WHERE opening_date = %s AND area_id IS NULL
+                     LIMIT 1",
+                    $inputDate
+                )
+            );
+        }
 
         if ($holiday) {
-            if ((int)$holiday->opening_closed === 1) {
+            if ((int) $holiday->opening_closed === 1) {
                 return ['closed' => true];
             }
             $openingFrom = $holiday->opening_from ?: '10:00';
             $openingTo   = $holiday->opening_to   ?: '24:00';
         } else {
-            // Fallback auf Raten / Standardzeiten
-            $currentDay = (int) wp_date('N', strtotime($inputDate), $tz);
+            // ------------------------------------------------------------------ //
+            // Priority 2: Area opening (weekday-based from area_opening JSON)
+            // ------------------------------------------------------------------ //
+            $area_result = self::resolveAreaOpening($inputDate, $area_id);
 
-            $rates_row = $wpdb->get_row(
-                $wpdb->prepare(
-                    "SELECT MIN(rate_time_from) AS from_min, MAX(rate_time_to) AS to_max
-                     FROM {$rates_table}
-                     WHERE rate_day = %d",
-                    $currentDay
-                )
-            );
-
-            if ($rates_row && ($rates_row->from_min || $rates_row->to_max)) {
-                $openingFrom = $rates_row->from_min ?: '10:00';
-                $openingTo   = $rates_row->to_max   ?: '24:00';
+            if ($area_result !== null) {
+                if ($area_result['closed'] ?? false) {
+                    return ['closed' => true];
+                }
+                $openingFrom = $area_result['from'];
+                $openingTo   = $area_result['to'];
             } else {
-                if ($currentDay >= 1 && $currentDay <= 4) {
-                    $openingFrom = '12:00';
-                    $openingTo   = '22:00';
-                } elseif ($currentDay == 5) {
-                    $openingFrom = '12:00';
-                    $openingTo   = '24:00';
-                } elseif ($currentDay == 7) {
-                    $openingFrom = '10:00';
-                    $openingTo   = '22:00';
+                // ------------------------------------------------------------------ //
+                // Priority 3: Rates table / hardcoded fallback
+                // ------------------------------------------------------------------ //
+                $currentDay = (int) wp_date('N', strtotime($inputDate), $tz);
+
+                $rates_row = $wpdb->get_row(
+                    $wpdb->prepare(
+                        "SELECT MIN(rate_time_from) AS from_min, MAX(rate_time_to) AS to_max
+                         FROM {$rates_table}
+                         WHERE rate_day = %d",
+                        $currentDay
+                    )
+                );
+
+                if ($rates_row && ($rates_row->from_min || $rates_row->to_max)) {
+                    $openingFrom = $rates_row->from_min ?: '10:00';
+                    $openingTo   = $rates_row->to_max   ?: '24:00';
                 } else {
-                    $openingFrom = '10:00';
-                    $openingTo   = '24:00';
+                    // Priority 4: Hardcoded defaults
+                    if ($currentDay >= 1 && $currentDay <= 4) {
+                        $openingFrom = '12:00';
+                        $openingTo   = '22:00';
+                    } elseif ($currentDay == 5) {
+                        $openingFrom = '12:00';
+                        $openingTo   = '24:00';
+                    } elseif ($currentDay == 7) {
+                        $openingFrom = '10:00';
+                        $openingTo   = '22:00';
+                    } else {
+                        $openingFrom = '10:00';
+                        $openingTo   = '24:00';
+                    }
                 }
             }
         }
@@ -91,11 +144,104 @@ class ServiceGetAvailableTimes
         }
 
         return [
-            'closed'        => false,
-            'opening_from'  => $openingFrom,
-            'opening_to'    => $openingToNorm,
-            'start_time'    => $startTime,
+            'closed'       => false,
+            'opening_from' => $openingFrom,
+            'opening_to'   => $openingToNorm,
+            'start_time'   => $startTime,
         ];
+    }
+
+    /**
+     * Resolve the area opening hours for a given date from the area_opening JSON.
+     *
+     * Returns:
+     *   - ['closed' => true]              — area explicitly closed that day
+     *   - ['from' => 'HH:MM', 'to' => 'HH:MM'] — area opening window
+     *   - null                            — no area / no opening configured → caller falls through
+     *
+     * @param string   $ymd     Y-m-d
+     * @param int|null $area_id Specific area ID, or null for the first area in DB.
+     * @return array{closed: bool}|array{from: string, to: string}|null
+     */
+    private static function resolveAreaOpening(string $ymd, ?int $area_id): ?array
+    {
+        global $wpdb;
+
+        $areas_table = $wpdb->prefix . 'wesanox_areas';
+
+        if ($area_id !== null) {
+            $row = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT area_opening FROM `{$areas_table}` WHERE id = %d LIMIT 1",
+                    $area_id
+                ),
+                ARRAY_A
+            );
+        } else {
+            $row = $wpdb->get_row(
+                "SELECT area_opening FROM `{$areas_table}` ORDER BY id ASC LIMIT 1",
+                ARRAY_A
+            );
+        }
+
+        if (!is_array($row) || empty($row['area_opening'])) {
+            return null; // no area or opening not configured
+        }
+
+        $opening = json_decode((string) $row['area_opening'], true);
+
+        if (!is_array($opening)) {
+            return null; // malformed JSON
+        }
+
+        $tz        = wp_timezone();
+        $dayNumber = (int) wp_date('N', strtotime($ymd), $tz); // 1=Mo … 7=So
+        $dayKey    = self::WEEKDAY_MAP[$dayNumber] ?? null;
+
+        if ($dayKey === null || !isset($opening[$dayKey])) {
+            return null; // unknown weekday
+        }
+
+        $dayData = $opening[$dayKey];
+        $enabled = (bool) ($dayData['enabled'] ?? false);
+
+        if (!$enabled) {
+            return ['closed' => true]; // day disabled in area config
+        }
+
+        $from = isset($dayData['from']) && $dayData['from'] !== '' ? (string) $dayData['from'] : null;
+        $to   = isset($dayData['to'])   && $dayData['to']   !== '' ? (string) $dayData['to']   : null;
+
+        if ($from === null || $to === null) {
+            return null; // enabled but times missing → fall through to rates
+        }
+
+        // <input type="time"> cannot represent 24:00; users enter 00:00 for midnight.
+        // Normalise to 23:59:59 so it is treated as end-of-day, consistent with
+        // how normalize_upper_time() handles the literal "24:00" value.
+        if ($to === '00:00') {
+            $to = '23:59:59';
+        }
+
+        return ['from' => $from, 'to' => $to];
+    }
+
+    /**
+     * @param string   $inputDate Y-m-d
+     * @param int|null $area_id
+     * @return array|int[]
+     * @throws \DateMalformedStringException
+     */
+    public static function wesanox_get_available_times(string $inputDate, ?int $area_id = null): array
+    {
+        $ow = self::get_opening_window($inputDate, $area_id);
+        if ($ow['closed'] ?? false) return ['closed' => 1];
+
+        return self::get_union_available_times(
+            $inputDate,
+            $ow['start_time'],
+            $ow['opening_to']
+        );
     }
 
     /**
@@ -146,7 +292,6 @@ class ServiceGetAvailableTimes
             foreach ($bookings as $b) {
                 if ((int)$b->room_id !== (int)$room->id) continue;
 
-                // Deine aktuelle Pufferlogik: -30 / +30
                 $startDT   = new DateTime($b->booking_from, $tz);
                 $closingTS = strtotime($openingToNorm);
 
@@ -174,7 +319,6 @@ class ServiceGetAvailableTimes
         $unionTimes = array_keys($unionSet);
         sort($unionTimes, SORT_STRING);
 
-        // Lead-Key (wie bisher): Raum mit den meisten Slots
         uasort($availableTimes, function ($a, $b) {
             return count($b) - count($a);
         });
@@ -186,51 +330,14 @@ class ServiceGetAvailableTimes
         return [];
     }
 
-    /**
-     * @param string $inputDate
-     * @return array|int[]
-     * @throws \DateMalformedStringException
-     */
-    public static function wesanox_get_available_times(string $inputDate): array
-    {
-        $ow = self::get_opening_window($inputDate);
-        if ($ow['closed'] ?? false) return ['closed' => 1];
-
-        if ( $ow['opening_to'] == "23:59:00") {
-            return self::get_union_available_times(
-                $inputDate,
-                $ow['start_time'],
-                $ow['opening_to'],
-                7
-            );
-        } else {
-            return self::get_union_available_times(
-                $inputDate,
-                $ow['start_time'],
-                $ow['opening_to'],
-                8
-            );
-        }
-
-    }
-
-    /**
-     * @param $time
-     * @return string
-     */
-    private static function normalize_upper_time($time)
+    private static function normalize_upper_time($time): string
     {
         $t = trim($time);
         if ($t === '24:00' || $t === '24:00:00') return '23:59:59';
         return $t;
     }
 
-    /**
-     * @param DateTime $time
-     * @return false|string
-     * @throws \DateMalformedStringException
-     */
-    private static function roundToNextQuarterHour(DateTime $time)
+    private static function roundToNextQuarterHour(DateTime $time): false|string
     {
         $minutes = (int)$time->format('i');
         $seconds = (int)$time->format('s');
@@ -250,12 +357,7 @@ class ServiceGetAvailableTimes
         return $time->format('H:i');
     }
 
-    /**
-     * @param $start
-     * @param $end
-     * @return array
-     */
-    private static function generateTimeSlots($start, $end)
+    private static function generateTimeSlots($start, $end): array
     {
         $times = [];
         $current = strtotime($start);
@@ -271,13 +373,7 @@ class ServiceGetAvailableTimes
         return $times;
     }
 
-    /**
-     * @param $times
-     * @param $start
-     * @param $end
-     * @return array
-     */
-    private static function removeBookedTimes($times, $start, $end)
+    private static function removeBookedTimes($times, $start, $end): array
     {
         $startTs = strtotime($start);
         $endTs   = strtotime($end);
@@ -290,13 +386,7 @@ class ServiceGetAvailableTimes
         return array_values($filtered);
     }
 
-    /**
-     * @param $times
-     * @param $minSlots
-     * @param $closingTime
-     * @return array
-     */
-    private static function filterTimeSlots($times, $minSlots, $closingTime)
+    private static function filterTimeSlots($times, $minSlots, $closingTime): array
     {
         $filtered = [];
         $count = count($times);
@@ -306,11 +396,16 @@ class ServiceGetAvailableTimes
         $duration   = $minSlots * $slotLength;
 
         $closingTs = strtotime($closingTime);
-        $latestByClosing = $closingTs - $duration;
 
-        // Falls ihr auch nach 22:00 öffnet, entferne die Hardcap-Zeile:
-        $latestHardCap = strtotime('22:00');
-        $latestStartTs = min($latestByClosing, $latestHardCap);
+        if ($closingTime === '23:59:00') {
+            $closingTs += 60;
+        }
+        if ($closingTime === '23:59:59') {
+            $closingTs += 1; // treat as 24:00:00 (midnight), so 22:00 start + 2 h fits
+        }
+
+        $latestByClosing = $closingTs - $duration;
+        $latestStartTs   = $latestByClosing;
 
         for ($i = 0; $i < $count; $i++) {
             $startTs = strtotime($times[$i]);

@@ -10,14 +10,16 @@ function create_wesanox_holidays_table()
 
     $sql = "CREATE TABLE {$table_name} (
         id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-        
+
         opening_date DATE DEFAULT NULL,
         opening_from TIME DEFAULT NULL,
         opening_to TIME DEFAULT NULL,
-        
+
         opening_closed TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
         opening_holiday TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
-            
+
+        area_id BIGINT(20) UNSIGNED NULL,
+
         PRIMARY KEY (id)
     ) $charset_collate;";
 

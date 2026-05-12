@@ -7,6 +7,11 @@ jQuery(document).ready(function($) {
         $('#element-booking-time').addClass('d-none');
     });
 
+    var _areaId = (function () {
+        var w = document.getElementById('wesanox-booking');
+        return w ? parseInt(w.getAttribute('data-area-id') || '0', 10) : 0;
+    }());
+
     $(CAL).zabuto_calendar({
         header_format: "[month] [year]",
         show_days: true,
@@ -14,7 +19,8 @@ jQuery(document).ready(function($) {
             url: ajax_object_calendar.ajax_url_calendar,
             ajax_settings: {
                 type: 'POST',
-                dataType: 'json'
+                dataType: 'json',
+                data: { area_id: _areaId }
             },
             success: function (data) { $('#loading').hide(); },
             error:   function (xhr) {}
@@ -113,7 +119,8 @@ function ajaxBookingTime(day) {
         data: {
                 action: 'element_booking_time',
                 day: day,
-                start_time: start_time
+                start_time: start_time,
+                area_id: s.area_id || 0
             }
         })
         .done(function (res) {

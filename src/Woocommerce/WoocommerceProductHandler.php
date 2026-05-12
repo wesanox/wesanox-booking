@@ -66,6 +66,7 @@ class WoocommerceProductHandler
 //        add_action('woocommerce_order_status_changed', [$this, 'medi_handle_order'], 10, 1 );
 //        add_action('woocommerce_checkout_order_processed', [$this, 'medi_handle_order'], 10, 1 );
         add_action('woocommerce_checkout_update_order_meta', [$this, 'checkout_order_meta_update']);
+        add_action('woocommerce_checkout_process', [$this, 'mail_woocommerce_checkout_process']);
         add_action('woocommerce_checkout_process', [$this, 'check_room_availability_before_order']);
         add_action('woocommerce_checkout_process', [$this, 'birthday_woocommerce_checkout_process']);
         add_action('woocommerce_product_data_panels', [$this, 'medi_product_data_fields']);
@@ -73,9 +74,8 @@ class WoocommerceProductHandler
         add_action('woocommerce_checkout_order_processed', [$this, 'wesanox_after_order_processed'], 20, 3);
         add_action('init', [$this, 'move_checkboxes_woocommerce'], 50);
 
-
         add_filter('gettext', [$this, 'medi_cancel_order_button_text'], 20, 3);
-        add_filter('woocommerce_checkout_fields', [$this, 'add_custom_checkout_field']);
+        add_filter('woocommerce_checkout_fields', [$this, 'add_custom_checkout_field'], 999);
         add_filter('woocommerce_checkout_fields' , [$this, 'default_address_fields_override']);
         add_filter('woocommerce_account_menu_items', [$this, 'hide_downloads_account_menu_item'], 10, 1);
         add_filter('woocommerce_valid_order_statuses_for_cancel', [$this, 'medi_cancellable_status'], 20, 2);
@@ -94,6 +94,11 @@ class WoocommerceProductHandler
      */
     public function wesanox_update_booking_session()
     {
+        if ( empty($_POST['nonce']) || ! wp_verify_nonce( sanitize_text_field( wp_unslash($_POST['nonce']) ), 'wesanox_booking_nonce' ) ) {
+            wp_send_json_error('Ungültige Anfrage (Nonce).', 403);
+            return;
+        }
+
         if (!function_exists('WC') || !WC()->session) {
             wp_send_json_error('Keine Session gefunden');
         }
@@ -132,6 +137,11 @@ class WoocommerceProductHandler
 
     public function wesanox_store_booking_payload(): void
     {
+        if ( empty($_POST['nonce']) || ! wp_verify_nonce( sanitize_text_field( wp_unslash($_POST['nonce']) ), 'wesanox_booking_nonce' ) ) {
+            wp_send_json_error(['msg' => 'Ungültige Anfrage (Nonce).'], 403);
+            return;
+        }
+
         if ( ! isset($_POST['payload']) ) {
             wp_send_json_error(['msg' => 'payload missing'], 400);
         }
@@ -174,10 +184,11 @@ class WoocommerceProductHandler
     }
 
     public function add_product_to_cart_callback() {
-        // 1) Sicherheits-Check (aktivieren, wenn du bereit bist)
-        // if ( empty($_POST['nonce']) || ! wp_verify_nonce( $_POST['nonce'], 'booking_nonce' ) ) {
-        //     wp_send_json_error(['message' => 'Ungültige Anfrage (Nonce).'], 403);
-        // }
+        // CSRF protection — nonce created in FrontendService::localizeScripts()
+        if ( empty($_POST['nonce']) || ! wp_verify_nonce( sanitize_text_field( wp_unslash($_POST['nonce']) ), 'wesanox_booking_nonce' ) ) {
+            wp_send_json_error(['message' => 'Ungültige Anfrage (Nonce).'], 403);
+            return;
+        }
 
         if ( ! function_exists('WC') || ! WC()->cart || ! WC()->session ) {
             wp_send_json_error(['message' => 'Warenkorb/Session nicht verfügbar.'], 500);
@@ -393,10 +404,11 @@ class WoocommerceProductHandler
      * @throws Exception
      */
     public function add_variation_to_cart() {
-        // Optional: Nonce prüfen
-        // if ( empty($_POST['nonce']) || ! wp_verify_nonce( $_POST['nonce'], 'booking_nonce' ) ) {
-        //     wp_send_json_error(['message' => 'Ungültige Anfrage (Nonce).'], 403);
-        // }
+        // CSRF protection
+        if ( empty($_POST['nonce']) || ! wp_verify_nonce( sanitize_text_field( wp_unslash($_POST['nonce']) ), 'wesanox_booking_nonce' ) ) {
+            wp_send_json_error(['message' => 'Ungültige Anfrage (Nonce).'], 403);
+            return;
+        }
 
         if ( ! isset($_POST['product_id']) ) {
             wp_send_json_error('product_id fehlt!', 400);
@@ -486,6 +498,18 @@ class WoocommerceProductHandler
         $start = $booking['day'] . ' ' . $booking['start_time'];
         $stop = $booking['day'] . ' ' . $booking['stop_time'];
 
+        $fields['billing']['billing_email']['required'] = true;
+
+        $fields['billing']['billing_email_confirm'] = [
+            'type'        => 'email',
+            'label'       => __('E-Mail-Adresse bestätigen', 'your-textdomain'),
+            'required'    => true,
+            'class'       => ['form-row-wide'],
+            'priority'    => 115,
+            'clear'       => true,
+            'autocomplete'=> 'email',
+        ];
+
         if( $start != '' && strtotime($start) > time() && $stop != '' && strtotime($stop) > time() ) {
             $fields['billing']['billing_birthdate'] = array(
                 'label' => __('Geburtstag', 'woocommerce'),
@@ -566,7 +590,7 @@ class WoocommerceProductHandler
         if ( ! $order instanceof \WC_Order ) {
             $order = wc_get_order( (int) $order_id );
             if ( ! $order ) {
-                error_log('wesanox_after_order_processed: order not found for id '.$order_id);
+                error_log('wesanox_after_order_processed: order not found for id ' . $order_id);
                 return;
             }
         }
@@ -579,26 +603,23 @@ class WoocommerceProductHandler
         $day        = $booking['day']        ?? null;
         $start_time = $booking['start_time'] ?? null;
         $stop_time  = $booking['stop_time']  ?? null;
+
         if (!$day || !$start_time || !$stop_time) return;
 
-        $room_id = (int) $order->get_meta('_booking_room_id');
-        if (!$room_id) {
-            $roomart_id = null;
+        // Validate formats to prevent malformed data reaching the DB.
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) return;
+        if (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $start_time)) return;
+        if (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $stop_time)) return;
 
-            foreach (WC()->cart->get_cart() as $item) {
-                if ((int)$item['product_id'] === 75) $roomart_id = 1;
-                if ((int)$item['product_id'] === 91) $roomart_id = 2;
-            }
-
-            if ($roomart_id) {
-                $room_id = (int) $this->service_get_available_roomarts->wesanox_find_room($roomart_id, $day, $start_time.':00', $stop_time.':00', 30);
-            }
+        $roomart_id = null;
+        foreach (WC()->cart->get_cart() as $item) {
+            if ((int) $item['product_id'] === 75) $roomart_id = 1;
+            if ((int) $item['product_id'] === 91) $roomart_id = 2;
         }
 
-        if (!$room_id) return;
+        if ($roomart_id === null) return;
 
         $customer_id = (int) $order->get_customer_id();
-
         if ( $customer_id > 0 ) {
             $exists = (int) $wpdb->get_var( $wpdb->prepare(
                 "SELECT COUNT(1) FROM {$wpdb->prefix}wc_customer_lookup WHERE customer_id = %d",
@@ -611,6 +632,31 @@ class WoocommerceProductHandler
             $customer_id = null;
         }
 
+        // ── Atomic: lock rooms row → re-check availability → insert ──────────
+        // Using FOR UPDATE inside a transaction prevents two concurrent checkouts
+        // from claiming the same room (race condition fix).
+        $wpdb->query('START TRANSACTION');
+
+        $room_id = $this->service_get_available_roomarts->wesanox_find_room_locked(
+            $roomart_id,
+            $day,
+            $start_time . ':00',
+            $stop_time  . ':00',
+            30
+        );
+
+        if (!$room_id) {
+            $wpdb->query('ROLLBACK');
+            $order->update_status(
+                'failed',
+                __('Der gewünschte Zeitraum ist nicht mehr verfügbar.', 'wesanox-booking')
+            );
+            error_log('wesanox_after_order_processed: no room available for order ' . $order_id . ' — possible race condition or slot taken');
+            WC()->session->__unset('booking');
+            WC()->session->__unset('booking_free_room_id');
+            return;
+        }
+
         $booking_id = $this->repository_booking->insert_booking(
             $day,
             $start_time . ':00',
@@ -620,14 +666,21 @@ class WoocommerceProductHandler
             $customer_id
         );
 
-        if ( $booking_id ) {
-            $order->update_meta_data('_booking_id',      $booking_id);
-            $order->update_meta_data('_booking_room_id', (int)$room_id);
-            $order->update_meta_data('_booking_date',    $day);
-            $order->update_meta_data('_booking_from',    $start_time . ':00');
-            $order->update_meta_data('_booking_to',      $stop_time  . ':00');
-            $order->save();
+        if (!$booking_id) {
+            $wpdb->query('ROLLBACK');
+            error_log('wesanox_after_order_processed: insert_booking failed for order ' . $order_id);
+            return;
         }
+
+        $wpdb->query('COMMIT');
+        // ── end atomic section ───────────────────────────────────────────────
+
+        $order->update_meta_data('_booking_id',      $booking_id);
+        $order->update_meta_data('_booking_room_id', (int) $room_id);
+        $order->update_meta_data('_booking_date',    $day);
+        $order->update_meta_data('_booking_from',    $start_time . ':00');
+        $order->update_meta_data('_booking_to',      $stop_time  . ':00');
+        $order->save();
 
         WC()->session->__unset('booking');
         WC()->session->__unset('booking_free_room_id');
@@ -711,7 +764,7 @@ class WoocommerceProductHandler
     public function checkout_order_meta_update( $order_id ) {
         $booking = ( function_exists('WC') && WC()->session ) ? (array) WC()->session->get('booking', []) : [];
 
-        $person = $_POST['person'];
+        $person = isset($_POST['person']) ? absint($_POST['person']) : 0;
 
         if ( ! empty( $_POST['billing_birthdate'] ) ) {
             $order = wc_get_order( $order_id );
@@ -1073,5 +1126,14 @@ class WoocommerceProductHandler
 
         $veen_spa_option_2 = isset($_POST['_veen_spa_option_3']) ? 1 : 0;
         update_post_meta($post_id, '_veen_spa_option_3', $veen_spa_option_2);
+    }
+
+    public function mail_woocommerce_checkout_process() {
+        $email  = isset($_POST['billing_email']) ? sanitize_email(wp_unslash($_POST['billing_email'])) : '';
+        $email2 = isset($_POST['billing_email_confirm']) ? sanitize_email(wp_unslash($_POST['billing_email_confirm'])) : '';
+
+        if ($email && $email2 && strtolower($email) !== strtolower($email2)) {
+            wc_add_notice(__('Die E-Mail-Adressen stimmen nicht überein.'), 'error');
+        }
     }
 }

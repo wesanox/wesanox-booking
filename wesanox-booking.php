@@ -14,48 +14,32 @@
  * Author URI:  https://wesanox.de
  * License:     GPL v3
  * Requires at least: 6.4
- * Requires PHP: 8.0.0
- * Text Domain: my-basics-plugin
+ * Requires PHP: 8.2
+ * Text Domain: wesanox-booking
  * Domain Path: /languages
  */
-defined( 'ABSPATH' )|| exit;
 
-/**
- * Include all files
- */
-require_once __DIR__ . '/database/wesanox_migration.php';
+declare(strict_types=1);
 
-/**
- * Create a new table in the database when the plugin is activated
- */
-register_activation_hook(__FILE__, 'wesanox_run_migrations');
+defined('ABSPATH') || exit;
 
-/**
- * Autoload class
- *
- * @param $class_name
- * @return void
- */
-function wesanox_autoload ( $class_name ) : void
-{
-    $prefix = 'Wesanox\\Booking\\';
-    $base_dir = plugin_dir_path(__FILE__) . 'src/';
+require_once __DIR__ . '/vendor/autoload.php';
 
-    if (strpos($class_name, $prefix) !== 0) {
-        return;
+use Wesanox\Booking\Plugin;
+
+register_activation_hook(
+    __FILE__,
+    [Plugin::class, 'activate']
+);
+
+register_deactivation_hook(
+    __FILE__,
+    [Plugin::class, 'deactivate']
+);
+
+add_action(
+    'plugins_loaded',
+    static function (): void {
+        Plugin::init();
     }
-
-    $relative_class = substr($class_name, strlen($prefix));
-    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-
-    if (file_exists($file)) {
-        require $file;
-    }
-}
-
-spl_autoload_register('wesanox_autoload');
-
-/**
- * Initialize the plugin
- */
-new \Wesanox\Booking\Init();
+);

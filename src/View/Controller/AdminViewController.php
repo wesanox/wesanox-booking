@@ -2,122 +2,103 @@
 
 namespace Wesanox\Booking\View\Controller;
 
-defined( 'ABSPATH' )|| exit;
+defined('ABSPATH') || exit;
 
-use Exception;
-use Wesanox\Booking\View\Admin\Edit\EditArea;
-use Wesanox\Booking\View\Admin\Edit\EditBooking;
-use Wesanox\Booking\View\Admin\Edit\EditRoom;
-use Wesanox\Booking\View\Admin\Edit\EditHolidays;
+use Wesanox\Booking\Admin\Pages\AreaListPage;
+use Wesanox\Booking\Admin\Pages\BookingListPage;
+use Wesanox\Booking\Admin\Pages\HolidayListPage;
+use Wesanox\Booking\Admin\Pages\ItemCategoryListPage;
+use Wesanox\Booking\Admin\Pages\ItemListPage;
 
 class AdminViewController
 {
-    private EditArea $edit_area;
-    private EditBooking $edit_booking;
-    private EditRoom $edit_room;
-    private EditHolidays $edit_holiday;
+    private BookingListPage      $booking_list_page;
+    private AreaListPage         $area_page;
+    private ItemListPage         $item_page;
+    private ItemCategoryListPage $category_page;
+    private HolidayListPage      $holiday_page;
 
-    public function __construct()
-    {
-        $this->edit_area = new EditArea();
-        $this->edit_booking = new EditBooking();
-        $this->edit_room = new EditRoom();
-        $this->edit_holiday = new EditHolidays();
+    public function __construct(
+        BookingListPage      $booking_list_page,
+        AreaListPage         $area_page,
+        ItemListPage         $item_page,
+        ItemCategoryListPage $category_page,
+        HolidayListPage      $holiday_page,
+    ) {
+        $this->booking_list_page = $booking_list_page;
+        $this->area_page         = $area_page;
+        $this->item_page         = $item_page;
+        $this->category_page     = $category_page;
+        $this->holiday_page      = $holiday_page;
 
         add_action('admin_menu', [$this, 'wesanox_add_booking_page']);
         add_action('admin_menu', [$this, 'wesanox_add_area_sub_page']);
         add_action('admin_menu', [$this, 'wesanox_add_room_sub_page']);
+        add_action('admin_menu', [$this, 'wesanox_add_item_category_sub_page']);
         add_action('admin_menu', [$this, 'wesanox_add_holiday_sub_page']);
     }
 
-    /**
-     * Set the page for the plugin inside the WordPress backend
-     *
-     * @return void
-     * @throws Exception
-     */
-    public function wesanox_add_booking_page() : void
+    public function wesanox_add_booking_page(): void
     {
-        if (!isset( $this->edit_booking )) {
-            throw new Exception("admin_view_account wurde nicht gesetzt!");
-        }
-
-        add_menu_page (
-            'Buchungs - Tool',
-            'Buchungen',
+        add_menu_page(
+            __('Buchungs - Tool', 'wesanox-booking'),
+            __('Buchungen', 'wesanox-booking'),
             'manage_options',
             'admin-booking-overview',
-            [ $this->edit_booking , 'wesanox_admin_edit_booking_render'],
+            [$this->booking_list_page, 'render'],
             'dashicons-calendar-alt',
             89
         );
     }
 
-    /**
-     * Set the page for the plugin inside the WordPress backend
-     *
-     * @return void
-     * @throws Exception
-     */
-    public function wesanox_add_area_sub_page() : void
+    public function wesanox_add_area_sub_page(): void
     {
-        if (!isset( $this->edit_area )) {
-            throw new Exception("admin_view_account wurde nicht gesetzt!");
-        }
-
-        add_submenu_page (
+        add_submenu_page(
             'admin-booking-overview',
-            'Areas',
-            'Areas',
+            __('Areas', 'wesanox-booking'),
+            __('Areas', 'wesanox-booking'),
             'manage_options',
             'area-settings',
-            [ $this->edit_area , 'wesanox_admin_edit_area_render'],
+            [$this->area_page, 'render'],
             89
         );
     }
 
-    /**
-     * Set the page for the plugin inside the WordPress backend
-     *
-     * @return void
-     * @throws Exception
-     */
-    public function wesanox_add_room_sub_page() : void
+    public function wesanox_add_room_sub_page(): void
     {
-        if (!isset( $this->edit_room )) {
-            throw new Exception("admin_view_account wurde nicht gesetzt!");
-        }
-
-        add_submenu_page (
+        add_submenu_page(
             'admin-booking-overview',
-            'Räume',
-            'Räume',
+            __('Items', 'wesanox-booking'),
+            __('Items', 'wesanox-booking'),
             'manage_options',
             'room-settings',
-            [ $this->edit_room , 'wesanox_admin_edit_room_render'],
+            [$this->item_page, 'render'],
             89
         );
     }
 
-    /**
-     * Set the page for the plugin inside the WordPress backend
-     *
-     * @return void
-     * @throws Exception
-     */
-    public function wesanox_add_holiday_sub_page() : void
+    public function wesanox_add_item_category_sub_page(): void
     {
-        if (!isset( $this->edit_holiday )) {
-            throw new Exception("admin_view_account wurde nicht gesetzt!");
-        }
-
-        add_submenu_page (
+        add_submenu_page(
             'admin-booking-overview',
-            'Feiertage',
-            'Feiertage',
+            __('Item-Kategorien', 'wesanox-booking'),
+            __('Item-Kategorien', 'wesanox-booking'),
+            'manage_options',
+            'item-category-settings',
+            [$this->category_page, 'render'],
+            89
+        );
+    }
+
+    public function wesanox_add_holiday_sub_page(): void
+    {
+        add_submenu_page(
+            'admin-booking-overview',
+            __('Feiertage', 'wesanox-booking'),
+            __('Feiertage', 'wesanox-booking'),
             'manage_options',
             'holiday-settings',
-            [ $this->edit_holiday , 'wesanox_admin_edit_holiday_render'],
+            [$this->holiday_page, 'render'],
             89
         );
     }

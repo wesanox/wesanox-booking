@@ -1,119 +1,173 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Wesanox\Booking\Boot\Booking;
 
-defined( 'ABSPATH' )|| exit;
+defined('ABSPATH') || exit;
 
+use Wesanox\Booking\Application\Integration\TriggerOrderSyncService;
+use Wesanox\Booking\Infrastructure\WesanoxApi\WesanoxApiBridge;
+use Wesanox\Booking\Infrastructure\WesanoxApi\WesanoxApiException;
+use function PHPUnit\Framework\isArray;
+
+/**
+ * Hooks into WooCommerce order events and synchronises orders with the
+ * external booking system via POST /webhooks/orders.
+ *
+ * Credential resolution (first match wins):
+ *   1. Order meta  wesanox_api_credential_id  (set by booking flow)
+ *   2. WP option   wesanox_default_api_credential_id  (site-wide default)
+ *   3. First credential returned by the bridge
+ */
 class HandlerBooking
 {
+    private TriggerOrderSyncService $syncService;
+
     public function __construct()
     {
-        add_action('woocommerce_order_status_changed', [$this, 'wesanox_handle_order'], 10, 1 );
-        add_action('woocommerce_checkout_order_processed', [$this, 'wesanox_handle_order'], 10, 1 );
+        $bridge            = new WesanoxApiBridge();
+        $this->syncService = new TriggerOrderSyncService($bridge);
+
+        add_action('woocommerce_checkout_order_processed', [$this, 'handleOrder'], 10, 1);
+        add_action('woocommerce_order_status_changed',     [$this, 'handleOrder'], 10, 4);
     }
 
-    public function wesanox_handle_order($order_id) {
-        $order = wc_get_order($order_id);
-
-        if (!$order) {
-            return 'Ungültige Bestellung.';
-        }
-
-        $start_time = $order->get_meta('Startzeit', true);
-        $end_time = $order->get_meta('Endzeit', true);
-        $coupon =  $this->order_contains_product($order, 2807);
-
-        if ($coupon) {
-            $response = $this->api_call_requests('handle-orders?orderId=' . $order_id);
-        } else if (!$start_time || !$end_time) {
-            $to = 'wester@mediamus.de, sandra@emsland-camping.de, melissa@emsland-camping.de';
-            $subject = 'FEHLER BEI BESTELLUNG ' . $order_id;
-            $message = 'Die Bestellung mit der ID ' . $order_id . ' fehlt die Startzeit oder Endzeit.';
-            $headers = array('Content-Type: text/html; charset=UTF-8');
-
-            $order->add_order_note('Startzeit oder Endzeit fehlt. Bitte prüfen.');
-
-            wp_mail($to, $subject, $message, $headers);
-
-            return 'Startzeit oder Endzeit fehlt.';
-        } else {
-            $response = $this->api_call_requests('handle-orders?orderId=' . $order_id);
-        }
-
-        if (is_wp_error($response)) {
-            return $response->get_error_message();
-        } else {
-            return $response;
-        }
-    }
-
-    public function api_call_requests($urlSection) {
-        global $wpdb;
-
-        include_once(ABSPATH . 'wp-admin/includes/plugin.php');
-
-        if (!is_plugin_active('medi-api-tool/medi-api-tool.php')) {
-            error_log('medi-api-tool ist nicht aktiv. API-Aufruf kann nicht ausgeführt werden.');
-
-            return new \WP_Error('plugin_inactive', 'medi-api-tool ist nicht aktiv');
-        }
-
-        $booking_api_id = $wpdb->get_var("SELECT booking_api_id FROM " . $wpdb->prefix . "medi_booking_table WHERE id = 1");
-
-        if (!$booking_api_id) {
-            error_log('Keine API-ID gefunden.');
-
-            return new \WP_Error('missing_api_id', 'Keine API-ID gefunden');
-        }
-
-        $api_info = $wpdb->get_row($wpdb->prepare(
-            "SELECT api_url, api_key, api_secret FROM {$wpdb->prefix}medi_api_tool_table WHERE id = %d",
-            $booking_api_id
-        ));
-
-        if (!$api_info) {
-            error_log('API-Informationen konnten nicht abgerufen werden.');
-
-            return new \WP_Error('missing_api_info', 'API-Informationen konnten nicht abgerufen werden');
-        }
-
-        $url = $api_info->api_url . $urlSection;
-
-        $headers = [
-            'mediApiKey'    => $api_info->api_key,
-            'mediApiSecret' => $api_info->api_secret,
-        ];
-
-        // API-Aufruf
-        $response = wp_remote_get($url, [
-            'headers' => $headers,
-            'timeout' => 15, // Timeout in Sekunden
-        ]);
-
-        if (is_wp_error($response)) {
-            error_log('API-Fehler: ' . $response->get_error_message());
-
-            return $response;
-        }
-
-        $status_code = wp_remote_retrieve_response_code($response);
-
-        if ($status_code !== 200) {
-            error_log('API-Antwort war nicht erfolgreich. Statuscode: ' . $status_code);
-
-            return new \WP_Error('api_error', 'API-Antwort war nicht erfolgreich. Statuscode: ' . $status_code);
-        }
-
-        return json_decode(wp_remote_retrieve_body($response), true);
-    }
-
-    private function order_contains_product( $order, $product_id ) : bool
+    public function handleOrder(int|string $orderId): void
     {
-        foreach ( $order->get_items() as $item ) {
-            if ( (int) $item->get_product_id() === (int) $product_id ) {
-                return true;
-            }
+        $orderId = (int) $orderId;
+        $order   = wc_get_order($orderId);
+
+        if (empty($order)) {
+            error_log("wesanox-booking HandlerBooking: Order #{$orderId} nicht gefunden.");
+            return;
         }
-        return false;
+
+        // Validate booking meta before triggering sync.
+        $startTime = $order->get_meta('Startzeit', true);
+        $endTime   = $order->get_meta('Endzeit',   true);
+
+        if (!$startTime || !$endTime) {
+            $this->notifyMissingMeta($order, $orderId);
+            return;
+        }
+
+        $credentialId = $this->resolveCredentialId($order);
+
+        if ($credentialId <= 0) {
+            error_log("wesanox-booking HandlerBooking: Keine API-Credential-ID für Order #{$orderId} ermittelbar.");
+            $order->add_order_note('Wesanox API: Keine Credential-ID konfiguriert. Sync nicht ausgeführt.');
+            return;
+        }
+
+        try {
+            $response = $this->syncService->execute($orderId, $credentialId);
+
+            $data    = is_array($response->data) ? $response->data : [];
+            $syncId  = $data['sync_id']  ?? '—';
+            $status  = $data['sync_status'] ?? '—';
+
+            $order->add_order_note("Wesanox API: Order synchronisiert. sync_id={$syncId}, status={$status}");
+
+        } catch (WesanoxApiException $e) {
+            error_log("wesanox-booking HandlerBooking: API-Fehler für Order #{$orderId}: {$e->getMessage()} (HTTP {$e->statusCode})");
+            $order->add_order_note("Wesanox API Fehler: {$e->getMessage()} (HTTP {$e->statusCode})");
+        } catch (\Throwable $e) {
+            error_log("wesanox-booking HandlerBooking: Unerwarteter Fehler für Order #{$orderId}: {$e->getMessage()}");
+            $order->add_order_note('Wesanox API: Unerwarteter Fehler. Bitte Logs prüfen.');
+        }
+    }
+
+    // ── backwards-compatibility ───────────────────────────────────────────────
+
+    /**
+     * @deprecated  Used by WoocommerceProductHandler — kept to avoid a breaking
+     *              change until that class is refactored to use the bridge directly.
+     *              Delegates to WesanoxApiBridge::get() via the first available credential.
+     *
+     * @return mixed  Decoded JSON body or null on failure
+     */
+    public function api_call_requests(string $urlSection): mixed
+    {
+        $bridge = new WesanoxApiBridge();
+
+        if (!$bridge->isAvailable()) {
+            error_log('wesanox-booking api_call_requests: wesanox-api nicht aktiv.');
+            return null;
+        }
+
+        $options = $bridge->listCredentialOptions();
+
+        if (empty($options)) {
+            error_log('wesanox-booking api_call_requests: Keine API-Credentials gefunden.');
+            return null;
+        }
+
+        $credentialId = (int) array_key_first($options);
+
+        // Split path and query string so the bridge can pass them separately.
+        $parts = explode('?', $urlSection, 2);
+        $path  = '/' . ltrim($parts[0], '/');
+        $query = [];
+
+        if (isset($parts[1])) {
+            parse_str($parts[1], $query);
+        }
+
+        $response = $bridge->get($credentialId, $path, $query);
+
+        if (!$response->isOk()) {
+            error_log("wesanox-booking api_call_requests: Fehler für {$path}: {$response->message}");
+            return null;
+        }
+
+        return $response->data;
+    }
+
+    // ── helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Determine the API credential ID to use for this order.
+     *
+     * Priority:
+     *   1. Order meta  wesanox_api_credential_id
+     *   2. WP option   wesanox_default_api_credential_id
+     *   3. First available credential from the bridge
+     */
+    private function resolveCredentialId(\WC_Order $order): int
+    {
+        // 1. Per-order meta (set by the booking flow when it knows the area).
+        $fromMeta = (int) $order->get_meta('wesanox_api_credential_id', true);
+        if ($fromMeta > 0) {
+            return $fromMeta;
+        }
+
+        // 2. Site-wide WP option.
+        $fromOption = (int) get_option('wesanox_default_api_credential_id', 0);
+        if ($fromOption > 0) {
+            return $fromOption;
+        }
+
+        // 3. First credential available in the bridge.
+        $bridge  = new WesanoxApiBridge();
+        $options = $bridge->listCredentialOptions();
+        if (!empty($options)) {
+            return (int) array_key_first($options);
+        }
+
+        return 0;
+    }
+
+    private function notifyMissingMeta(\WC_Order $order, int $orderId): void
+    {
+        $order->add_order_note('Wesanox API: Startzeit oder Endzeit fehlt. Sync nicht ausgeführt.');
+
+        $to      = 'wester@mediamus.de, sandra@emsland-camping.de, melissa@emsland-camping.de';
+        $subject = 'FEHLER BEI BESTELLUNG ' . $orderId;
+        $message = "Die Bestellung mit der ID {$orderId} hat keine Startzeit oder Endzeit.";
+
+        wp_mail($to, $subject, $message, ['Content-Type: text/html; charset=UTF-8']);
+
+        error_log("wesanox-booking HandlerBooking: Order #{$orderId}: Startzeit oder Endzeit fehlt.");
     }
 }

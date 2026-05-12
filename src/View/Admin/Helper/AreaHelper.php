@@ -20,10 +20,9 @@ class AreaHelper
 
         $this->handler_data = new HandlerData($wpdb);
 
+        // Admin-only AJAX: nopriv hooks intentionally removed.
         add_action('wp_ajax_area_insert_data_action', [$this, 'admin_area_insert_data']);
-        add_action('wp_ajax_nopriv_area_insert_data_action', [$this, 'admin_area_insert_data']);
         add_action('wp_ajax_opening_insert_data_action', [$this, 'admin_opening_insert_data']);
-        add_action('wp_ajax_nopriv_opening_insert_data_action', [$this, 'admin_opening_insert_data']);
     }
 
     /**
@@ -33,6 +32,11 @@ class AreaHelper
     {
         if (!isset($_POST['_ajax_nonce']) || !wp_verify_nonce($_POST['_ajax_nonce'], 'wesanox_booking_nonce')) {
             wp_send_json_error(['message' => 'Ungültige Anfrage.']);
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Keine Berechtigung.']);
             return;
         }
 
@@ -77,6 +81,11 @@ class AreaHelper
     {
         if (!isset($_POST['_ajax_nonce']) || !wp_verify_nonce($_POST['_ajax_nonce'], 'wesanox_booking_nonce')) {
             wp_send_json_error(['message' => 'Ungültige Anfrage.']);
+            return;
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => 'Keine Berechtigung.']);
             return;
         }
 

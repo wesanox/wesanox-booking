@@ -233,35 +233,734 @@ select.form-select:hover {
   outline-style: initial;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Wesanox Booking — Admin Design System
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Design tokens ──────────────────────────────────────── */
+.wsn-admin {
+    --wsn-primary:         #1a7f8e;
+    --wsn-primary-dark:    #15626e;
+    --wsn-primary-dim:     #1a7f8e22;
+    --wsn-primary-bg:      #f0f8fa;
+    --wsn-primary-border:  #a8d4da;
+
+    --wsn-success:         #0a7d45;
+    --wsn-success-bg:      #edfaf3;
+    --wsn-success-border:  #7bcca3;
+
+    --wsn-danger:          #c0392b;
+    --wsn-danger-bg:       #fdf3f2;
+    --wsn-danger-border:   #e8a49f;
+
+    --wsn-warning:         #8a5c00;
+    --wsn-warning-bg:      #fff8e1;
+    --wsn-warning-border:  #f0cc60;
+
+    --wsn-surface:         #ffffff;
+    --wsn-page-bg:         #f6f7f7;
+    --wsn-border:          #dde1e4;
+    --wsn-border-light:    #ebebeb;
+
+    --wsn-text:            #1d2327;
+    --wsn-text-muted:      #50575e;
+    --wsn-text-faint:      #8c8f94;
+
+    --wsn-radius-sm:       4px;
+    --wsn-radius:          6px;
+    --wsn-radius-lg:       10px;
+
+    --wsn-shadow-xs:       0 1px 2px rgba(0,0,0,.06);
+    --wsn-shadow-sm:       0 1px 4px rgba(0,0,0,.08), 0 0 0 1px rgba(0,0,0,.04);
+    --wsn-shadow:          0 2px 8px rgba(0,0,0,.10), 0 0 0 1px rgba(0,0,0,.04);
+
+    --wsn-transition:      150ms ease;
+}
+
+/* ── Page wrapper ────────────────────────────────────────── */
+.wsn-admin {
+    max-width: 1280px;
+}
+
+/* ── Page heading ────────────────────────────────────────── */
+.wsn-admin h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--wsn-text);
+    letter-spacing: -0.2px;
+    margin-bottom: 4px;
+    padding-bottom: 0;
+}
+
+.wsn-admin .page-title-action {
+    background: var(--wsn-primary);
+    color: #fff !important;
+    border: none;
+    border-radius: var(--wsn-radius-sm);
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--wsn-transition);
+    box-shadow: none;
+    vertical-align: middle;
+}
+
+.wsn-admin .page-title-action:hover {
+    background: var(--wsn-primary-dark);
+    color: #fff !important;
+}
+
+.wsn-admin hr.wp-header-end {
+    border: none;
+    border-top: 1px solid var(--wsn-border);
+    margin: 12px 0 16px;
+}
+
+/* ── Back link ───────────────────────────────────────────── */
+.wsn-admin > a[href]:first-of-type,
+.wsn-admin > a.wsn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 16px;
+    color: var(--wsn-primary);
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color var(--wsn-transition);
+}
+
+.wsn-admin > a[href]:first-of-type:hover,
+.wsn-admin > a.wsn-back:hover {
+    color: var(--wsn-primary-dark);
+    text-decoration: underline;
+}
+
+/* ── Notices ─────────────────────────────────────────────── */
+.wsn-admin .notice {
+    border-radius: var(--wsn-radius-sm);
+    border: 1px solid;
+    border-left-width: 4px;
+    box-shadow: var(--wsn-shadow-xs);
+    padding: 10px 14px;
+    margin: 0 0 16px;
+}
+
+.wsn-admin .notice p,
+.wsn-admin .notice ul {
+    margin: 0;
+    font-size: 13px;
+}
+
+.wsn-admin .notice ul {
+    padding-left: 18px;
+}
+
+.wsn-admin .notice-success {
+    background: var(--wsn-success-bg);
+    border-color: var(--wsn-success-border);
+    border-left-color: var(--wsn-success);
+    color: var(--wsn-success);
+}
+
+.wsn-admin .notice-error {
+    background: var(--wsn-danger-bg);
+    border-color: var(--wsn-danger-border);
+    border-left-color: var(--wsn-danger);
+    color: var(--wsn-danger);
+}
+
+.wsn-admin .notice-warning {
+    background: var(--wsn-warning-bg);
+    border-color: var(--wsn-warning-border);
+    border-left-color: var(--wsn-warning);
+    color: var(--wsn-warning);
+}
+
+/* ── Navigation tabs ─────────────────────────────────────── */
+.wsn-admin .nav-tab-wrapper {
+    border-bottom: 2px solid var(--wsn-border);
+    padding: 0;
+    margin: 16px 0 0;
+    background: transparent;
+}
+
+.wsn-admin .nav-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--wsn-text-muted);
+    text-decoration: none;
+    transition: color var(--wsn-transition), border-color var(--wsn-transition);
+    border-radius: var(--wsn-radius-sm) var(--wsn-radius-sm) 0 0;
+}
+
+.wsn-admin .nav-tab:hover {
+    color: var(--wsn-primary);
+    background: var(--wsn-primary-bg);
+    border-bottom-color: var(--wsn-primary-border);
+}
+
+.wsn-admin .nav-tab-active,
+.wsn-admin .nav-tab.nav-tab-active {
+    color: var(--wsn-primary);
+    border-bottom-color: var(--wsn-primary);
+    font-weight: 700;
+    background: transparent;
+}
+
+.wsn-admin .wesanox-tab-panel {
+    padding-top: 24px;
+}
+
+.wsn-admin .wesanox-tab-panel > .form-table,
+.wsn-admin .wesanox-tab-panel > .widefat {
+    margin-top: 0;
+}
+
+.wsn-admin .wesanox-tab-panel .notice {
+    margin: 0 0 16px;
+}
+
+/* ── Data tables (lists) ─────────────────────────────────── */
+.wsn-admin .wp-list-table {
+    background: var(--wsn-surface);
+    border-radius: var(--wsn-radius);
+    border: 1px solid var(--wsn-border) !important;
+    box-shadow: var(--wsn-shadow-sm) !important;
+    overflow: hidden;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+.wsn-admin .wp-list-table thead th,
+.wsn-admin .wp-list-table thead td {
+    background: var(--wsn-page-bg);
+    border-bottom: 2px solid var(--wsn-border);
+    color: var(--wsn-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 14px;
+}
+
+.wsn-admin .wp-list-table.striped > tbody > tr:nth-child(odd) td,
+.wsn-admin .wp-list-table.striped > tbody > tr:nth-child(odd) th {
+    background: #fafbfc;
+}
+
+.wsn-admin .wp-list-table > tbody > tr:hover td,
+.wsn-admin .wp-list-table > tbody > tr:hover th {
+    background: var(--wsn-primary-bg) !important;
+}
+
+.wsn-admin .wp-list-table tbody td,
+.wsn-admin .wp-list-table tbody th {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--wsn-border-light);
+    font-size: 13px;
+    color: var(--wsn-text);
+    vertical-align: middle;
+}
+
+.wsn-admin .wp-list-table tbody tr:last-child td,
+.wsn-admin .wp-list-table tbody tr:last-child th {
+    border-bottom: none;
+}
+
+/* ── Subsubsub filter navigation ─────────────────────────── */
+.wsn-admin .subsubsub {
+    margin: 8px 0 12px;
+    font-size: 13px;
+}
+
+.wsn-admin .subsubsub a {
+    color: var(--wsn-text-muted);
+    text-decoration: none;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: color var(--wsn-transition), background var(--wsn-transition);
+}
+
+.wsn-admin .subsubsub a:hover,
+.wsn-admin .subsubsub a.current {
+    color: var(--wsn-primary);
+    background: var(--wsn-primary-bg);
+}
+
+.wsn-admin .subsubsub a.current {
+    font-weight: 700;
+}
+
+/* ── Form tables ─────────────────────────────────────────── */
+.wsn-admin .form-table,
+.wsn-admin .form-table.widefat {
+    background: var(--wsn-surface);
+    border-radius: var(--wsn-radius);
+    border: 1px solid var(--wsn-border) !important;
+    box-shadow: var(--wsn-shadow-sm) !important;
+    margin-bottom: 20px;
+    overflow: hidden;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+.wsn-admin .form-table th {
+    width: 220px;
+    padding: 14px 20px 14px 24px;
+    background: var(--wsn-page-bg);
+    border-right: 1px solid var(--wsn-border-light);
+    border-bottom: 1px solid var(--wsn-border-light);
+    color: var(--wsn-text);
+    font-weight: 600;
+    font-size: 13px;
+    vertical-align: top;
+}
+
+.wsn-admin .form-table tr:last-child th {
+    border-bottom: none;
+}
+
+.wsn-admin .form-table td {
+    padding: 12px 20px 12px 20px;
+    border-bottom: 1px solid var(--wsn-border-light);
+    vertical-align: top;
+}
+
+.wsn-admin .form-table tr:last-child td {
+    border-bottom: none;
+}
+
+.wsn-admin .form-table .description {
+    color: var(--wsn-text-muted);
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+/* ── Standalone forms ────────────────────────────────────── */
+.wsn-admin > form,
+.wsn-admin > .wesanox-tab-panel > form {
+    margin-top: 20px;
+}
+
+/* ── Inputs ──────────────────────────────────────────────── */
+.wsn-admin input[type="text"],
+.wsn-admin input[type="number"],
+.wsn-admin input[type="email"],
+.wsn-admin input[type="time"],
+.wsn-admin input[type="date"],
+.wsn-admin input[type="url"],
+.wsn-admin textarea,
+.wsn-admin select:not(.form-select) {
+    border: 1px solid var(--wsn-border);
+    border-radius: var(--wsn-radius-sm);
+    padding: 7px 10px;
+    font-size: 13px;
+    color: var(--wsn-text);
+    background: var(--wsn-surface);
+    transition: border-color var(--wsn-transition), box-shadow var(--wsn-transition);
+    box-shadow: var(--wsn-shadow-xs);
+    line-height: 1.5;
+}
+
+.wsn-admin input[type="text"]:focus,
+.wsn-admin input[type="number"]:focus,
+.wsn-admin input[type="email"]:focus,
+.wsn-admin input[type="time"]:focus,
+.wsn-admin input[type="date"]:focus,
+.wsn-admin input[type="url"]:focus,
+.wsn-admin textarea:focus,
+.wsn-admin select:not(.form-select):focus {
+    outline: none;
+    border-color: var(--wsn-primary);
+    box-shadow: 0 0 0 3px var(--wsn-primary-dim);
+}
+
+.wsn-admin input.regular-text {
+    width: 100%;
+    max-width: 500px;
+}
+
+.wsn-admin input.small-text {
+    width: 80px;
+}
+
+/* ── Checkboxes ──────────────────────────────────────────── */
+.wsn-admin input[type="checkbox"]:not(.form-radio) {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--wsn-primary);
+    cursor: pointer;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.wsn-admin .button,
+.wsn-admin .button-secondary {
+    background: var(--wsn-surface);
+    border: 1px solid var(--wsn-border);
+    border-radius: var(--wsn-radius-sm);
+    color: var(--wsn-text);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    line-height: 1.5;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background var(--wsn-transition), border-color var(--wsn-transition), color var(--wsn-transition);
+    box-shadow: var(--wsn-shadow-xs);
+}
+
+.wsn-admin .button:hover,
+.wsn-admin .button-secondary:hover {
+    background: var(--wsn-page-bg);
+    border-color: var(--wsn-primary-border);
+    color: var(--wsn-primary-dark);
+}
+
+.wsn-admin .button-primary,
+.wsn-admin input[type="submit"].button-primary {
+    background: var(--wsn-primary);
+    border-color: var(--wsn-primary);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(26,127,142,.30);
+}
+
+.wsn-admin .button-primary:hover,
+.wsn-admin input[type="submit"].button-primary:hover {
+    background: var(--wsn-primary-dark);
+    border-color: var(--wsn-primary-dark);
+    color: #fff;
+}
+
+.wsn-admin .button-small {
+    font-size: 11px;
+    padding: 3px 10px;
+}
+
+.wsn-admin .button-link-delete {
+    background: transparent;
+    border-color: transparent;
+    color: var(--wsn-danger);
+    box-shadow: none;
+}
+
+.wsn-admin .button-link-delete:hover {
+    background: var(--wsn-danger-bg);
+    border-color: var(--wsn-danger-border);
+    color: var(--wsn-danger);
+}
+
+/* ── Submit row ──────────────────────────────────────────── */
+.wsn-admin .submit {
+    padding: 16px 24px !important;
+    border-top: 1px solid var(--wsn-border-light);
+    margin-top: 0;
+    background: var(--wsn-page-bg);
+    border-radius: 0 0 var(--wsn-radius) var(--wsn-radius);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ── Status badge (bookings) ─────────────────────────────── */
+.wsn-admin .order-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--wsn-page-bg);
+    border: 1px solid var(--wsn-border);
+    color: var(--wsn-text-muted);
+}
+
+.wsn-admin .order-status.status-pending {
+    background: #fff8e1;
+    border-color: #f0cc60;
+    color: #8a5c00;
+}
+
+.wsn-admin .order-status.status-confirmed,
+.wsn-admin .order-status.status-completed {
+    background: var(--wsn-success-bg);
+    border-color: var(--wsn-success-border);
+    color: var(--wsn-success);
+}
+
+.wsn-admin .order-status.status-cancelled {
+    background: var(--wsn-danger-bg);
+    border-color: var(--wsn-danger-border);
+    color: var(--wsn-danger);
+}
+
+/* ── Code / shortcode blocks ─────────────────────────────── */
+.wsn-admin code {
+    background: var(--wsn-page-bg);
+    border: 1px solid var(--wsn-border);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 12px;
+    color: var(--wsn-primary-dark);
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+}
+
+/* ── Table toolbar (above table, button top-right) ──────── */
+.wsn-admin .wsn-table-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* ── Add entry button (below table) ─────────────────────── */
+.wsn-admin .wsn-add-entry-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 10px 18px;
+    background: var(--wsn-surface);
+    border: 1.5px dashed var(--wsn-primary-border);
+    border-radius: var(--wsn-radius);
+    color: var(--wsn-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background var(--wsn-transition), border-color var(--wsn-transition), color var(--wsn-transition);
+    box-shadow: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.wsn-admin .wsn-add-entry-btn:hover {
+    background: var(--wsn-primary-bg);
+    border-color: var(--wsn-primary);
+    border-style: solid;
+    color: var(--wsn-primary-dark);
+}
+
+.wsn-admin .wsn-add-entry-btn__icon {
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 400;
+}
+
+/* ── Section header row (Rates tab toolbar) ──────────────── */
+.wsn-admin .wsn-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 0 12px;
+    padding-top: 4px;
+}
+
+.wsn-admin .wsn-section-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--wsn-text);
+    letter-spacing: -0.1px;
+}
+
+/* ── Cards (rate groups) ─────────────────────────────────── */
+.wsn-admin .wsn-card {
+    background: var(--wsn-surface);
+    border: 1px solid var(--wsn-border);
+    border-radius: var(--wsn-radius);
+    margin-bottom: 14px;
+    overflow: hidden;
+    box-shadow: var(--wsn-shadow-xs);
+    transition: box-shadow var(--wsn-transition);
+}
+
+.wsn-admin .wsn-card:hover {
+    box-shadow: var(--wsn-shadow-sm);
+}
+
+.wsn-admin .wsn-card--warning {
+    border-color: var(--wsn-danger-border);
+}
+
+.wsn-admin .wsn-card__header {
+    background: var(--wsn-page-bg);
+    border-bottom: 1px solid var(--wsn-border-light);
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.wsn-admin .wsn-card--warning .wsn-card__header {
+    background: var(--wsn-danger-bg);
+    border-bottom-color: var(--wsn-danger-border);
+}
+
+.wsn-admin .wsn-card__header-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--wsn-text);
+}
+
+.wsn-admin .wsn-card__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.wsn-admin .wsn-card__empty {
+    padding: 14px 16px;
+    margin: 0;
+    color: var(--wsn-text-faint);
+    font-style: italic;
+    font-size: 13px;
+}
+
+/* ── Tables inside cards ─────────────────────────────────── */
+.wsn-admin .wsn-card .wp-list-table {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0;
+}
+
+.wsn-admin .wsn-card .wp-list-table thead th {
+    background: #f9fafb;
+    font-size: 11px;
+    padding: 7px 12px;
+    border-top: 1px solid var(--wsn-border-light);
+    color: var(--wsn-text-muted);
+}
+
+.wsn-admin .wsn-card .wp-list-table tbody td {
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+/* ── Day checkboxes ──────────────────────────────────────── */
+.wsn-admin .wsn-days-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-bottom: 10px;
+}
+
+.wsn-admin .wsn-days-grid label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--wsn-text);
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: var(--wsn-radius-sm);
+    transition: background var(--wsn-transition);
+}
+
+.wsn-admin .wsn-days-grid label:hover {
+    background: var(--wsn-primary-bg);
+}
+
+.wsn-admin .wsn-days-shortcuts {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+/* ── Day badge tags ──────────────────────────────────────── */
+.wsn-admin .wsn-days-badge {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.wsn-admin .wsn-days-badge span {
+    background: var(--wsn-primary-bg);
+    border: 1px solid var(--wsn-primary-border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 11px;
+    color: var(--wsn-primary-dark);
+    font-weight: 600;
+}
+
+/* ── Opening hours table (area form) ────────────────────── */
+.wsn-admin .wsn-opening-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.wsn-admin .wsn-opening-table td {
+    padding: 5px 10px 5px 0;
+    vertical-align: middle;
+    border-bottom: none;
+    background: transparent;
+}
+
+.wsn-admin .wsn-opening-table input[type="time"] {
+    width: 110px;
+}
+
+/* ── Modal (legacy) ──────────────────────────────────────── */
 .wesanox-booking-tool-admin .modal {
-  position: absolute;
-  top: 0;
-  left: -20px;
-  bottom: auto;
-  right: auto;
-  width: 100%;
-  height: 100vh;
-  z-index: 100;
-  background-color: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
+    position: absolute;
+    top: 0;
+    left: -20px;
+    bottom: auto;
+    right: auto;
+    width: 100%;
+    height: 100vh;
+    z-index: 100;
+    background-color: rgba(0,0,0,.2);
+    backdrop-filter: blur(10px);
 }
+
 .wesanox-booking-tool-admin .modal-content-box {
-  padding: 1rem;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: white;
+    padding: 1rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: var(--wsn-radius);
+    box-shadow: var(--wsn-shadow);
 }
+
 .wesanox-booking-tool-admin .modal-close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  font-size: calc(25px + (40 - 25) * (100vw - 300px) / 1620);
-  cursor: pointer;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: calc(25px + (40 - 25) * (100vw - 300px) / 1620);
+    cursor: pointer;
 }
+
 .wesanox-booking-tool-admin .modal table {
-  margin-bottom: 1rem;
+    margin-bottom: 1rem;
 }
 
 /*# sourceMappingURL=styles.css.map */

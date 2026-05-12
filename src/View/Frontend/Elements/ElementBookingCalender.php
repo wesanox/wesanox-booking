@@ -94,7 +94,9 @@ class ElementBookingCalender
                 continue;
             }
 
-            $result = $this->service_get_times->wesanox_get_available_times($date);
+            // Accept area_id from the request (forward-compatible; falls back to first area when absent).
+            $area_id = isset($_REQUEST['area_id']) ? absint($_REQUEST['area_id']) : null;
+            $result  = $this->service_get_times->wesanox_get_available_times($date, $area_id ?: null);
 
             if (is_array($result) && isset($result['closed']) && (int)$result['closed'] === 1) {
                 $classname = 'inactive';

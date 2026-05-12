@@ -77,10 +77,12 @@ class ServiceGetNextAvailableRoomarts
                 $startTs = strtotime($startHi);
                 $stopTs  = $startTs + $durationMinutes * 60;
 
-                // Nicht über Schließzeit und optional Hardcap 22:00
+                // Nicht über Schließzeit hinaus starten
                 $closingTs = strtotime($openingToNorm);
-                $hardCapTs = strtotime('22:00'); // falls du das weiterhin willst
-                $latestAllowedStartTs = min($closingTs - $durationMinutes * 60, $hardCapTs);
+                if ($openingToNorm === '23:59:59') {
+                    $closingTs += 1; // treat as 24:00:00 (midnight)
+                }
+                $latestAllowedStartTs = $closingTs - $durationMinutes * 60;
 
                 if ($startTs > $latestAllowedStartTs) {
                     break;
@@ -115,60 +117,21 @@ class ServiceGetNextAvailableRoomarts
         return $results;
     }
 
-    /** Öffnungs-Bounds wie in ServiceGetAvailableTimes (Holiday, Raten, Fallbacks) */
+    /**
+     * Delegates to ServiceGetAvailableTimes::get_opening_window() so that the full
+     * priority chain (Holiday → Area Opening → Rates → Hardcoded) is respected here too.
+     *
+     * @return array{0: string|null, 1: string|null}  [openingFrom, openingToNorm] or [null, null] if closed.
+     */
     private function get_opening_bounds_for_day(string $ymd): array
     {
-        // => nutzt deine vorhandenen Regeln 1:1
-        $tz = wp_timezone();
-        $today = (new DateTime('now', $tz))->format('Y-m-d');
+        $ow = ServiceGetAvailableTimes::get_opening_window($ymd);
 
-        // Hol’ dir openingFrom/openingTo identisch zu ServiceGetAvailableTimes::wesanox_get_available_times()
-        // Ich rufe pragmatisch einmal deine Funktion auf und lese Start/Ende daraus:
-        // (Kleine Abkürzung: wir berechnen hier dieselben Werte nochmal inline – stabiler gegen Seiteneffekte)
-
-        global $wpdb;
-        $holidays_table = $wpdb->prefix . 'wesanox_holidays';
-        $holiday = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT opening_from, opening_to, opening_closed, opening_holiday
-                 FROM {$holidays_table}
-                 WHERE opening_date = %s LIMIT 1",
-                $ymd
-            )
-        );
-
-        if ($holiday && (int)$holiday->opening_closed === 1) {
-            return [null, null]; // geschlossen
+        if ($ow['closed'] ?? false) {
+            return [null, null];
         }
 
-        if ($holiday) {
-            $openingFrom = $holiday->opening_from ?: '10:00';
-            $openingTo   = $holiday->opening_to   ?: '24:00';
-        } else {
-            $rates_table = $wpdb->prefix . 'wesanox_rates';
-            $currentDay  = (int) wp_date('N', strtotime($ymd), $tz);
-            $rates_row = $wpdb->get_row(
-                $wpdb->prepare(
-                    "SELECT MIN(rate_time_from) AS from_min, MAX(rate_time_to) AS to_max
-                     FROM {$rates_table}
-                     WHERE rate_day = %d",
-                    $currentDay
-                )
-            );
-            if ($rates_row && ($rates_row->from_min || $rates_row->to_max)) {
-                $openingFrom = $rates_row->from_min ?: '10:00';
-                $openingTo   = $rates_row->to_max   ?: '24:00';
-            } else {
-                if ($currentDay >= 1 && $currentDay <= 4) { $openingFrom = '12:00'; $openingTo = '22:00';
-                } elseif ($currentDay == 5)             { $openingFrom = '12:00'; $openingTo = '24:00';
-                } elseif ($currentDay == 7)             { $openingFrom = '10:00'; $openingTo = '22:00';
-                } else                                   { $openingFrom = '10:00'; $openingTo = '24:00'; }
-            }
-        }
-
-        $openingToNorm = ($openingTo === '24:00' || $openingTo === '24:00:00') ? '23:59:59' : $openingTo;
-
-        return [$openingFrom, $openingToNorm];
+        return [$ow['opening_from'], $ow['opening_to']];
     }
 
     /** 15-Min-Slots als 'H:i' von start..end (inkl.) */

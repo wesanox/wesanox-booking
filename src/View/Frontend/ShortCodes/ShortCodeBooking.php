@@ -41,16 +41,23 @@ class ShortCodeBooking
         add_shortcode('booking_view', [$this, 'wesanox_render_frontend_shortcode']);
     }
 
-    public function wesanox_render_frontend_shortcode(): string
+    /**
+     * @param array|string $atts  Shortcode attributes. Supports: area_id (int).
+     *                            Example: [booking_view area_id="2"]
+     */
+    public function wesanox_render_frontend_shortcode($atts = []): string
     {
-        $booking = ( function_exists('WC') && WC()->session ) ? (array) WC()->session->get('booking', []) : [];
+        $atts     = shortcode_atts(['area_id' => '0'], is_array($atts) ? $atts : []);
+        $area_id  = absint($atts['area_id']);
+
+        $booking  = ( function_exists('WC') && WC()->session ) ? (array) WC()->session->get('booking', []) : [];
         $duration = ( !empty($booking['how_long']) ) ? $booking['how_long'] : '';
 
         $active_box = ( $duration != '' ) ? ' d-none d-md-block' : ' d-none';
         $active     = ( $duration != '' ) ? ' active' : ' inactive';
 
         return '
-            <div id="wesanox-booking">
+            <div id="wesanox-booking" data-area-id="' . esc_attr((string) $area_id) . '">
                 <div class="timer-box text-center h6 mb-5 d-none">
                     Ablauf deiner Buchung: <span id="timer"></span> - Danach musst du deine Daten erneut eingeben.
                 </div>

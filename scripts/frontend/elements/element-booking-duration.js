@@ -44,13 +44,25 @@ function ajaxGetProductInfo(product_id = '') {
         start_time: s.start_time,
         stop_time: s.stop_time,
         day: s.day,
+        area_id: s.area_id || 0
     };
 
     jQuery.post(ajax_object_duration.ajax_url_duration, data, function(response) {
         if (!response.available_one) {
             jQuery('#variation_price_1').html(response.variation_price_one);
             jQuery('#variation_btn_1').addClass('d-none');
-            jQuery('#variation_message_1').removeClass('d-none').css('z-index', 1).html('ausgebucht');
+
+            var msg1 = 'ausgebucht';
+            if (response.next_available_one && response.next_available_one.length > 0) {
+                msg1 += '<br><small class="text-muted">Nächste freie Zeit:<br>';
+                jQuery.each(response.next_available_one, function(i, slot) {
+                    msg1 += slot.start + ' – ' + slot.stop
+                          + (slot.date !== response.start ? ' (' + slot.date + ')' : '')
+                          + '<br>';
+                });
+                msg1 += '</small>';
+            }
+            jQuery('#variation_message_1').removeClass('d-none').css('z-index', 1).html(msg1);
         } else {
             jQuery('#variation_price_1').html(response.variation_price_one);
             jQuery('#variation_btn_1').attr('data-product_id', response.variation_id_one);
@@ -64,7 +76,18 @@ function ajaxGetProductInfo(product_id = '') {
         if (!response.available_two) {
             jQuery('#variation_price_2').html(response.variation_price_two);
             jQuery('#variation_btn_2').addClass('d-none');
-            jQuery('#variation_message_2').removeClass('d-none').css('z-index', 1).html('ausgebucht');
+
+            var msg2 = 'ausgebucht';
+            if (response.next_available_two && response.next_available_two.length > 0) {
+                msg2 += '<br><small class="text-muted">Nächste freie Zeit:<br>';
+                jQuery.each(response.next_available_two, function(i, slot) {
+                    msg2 += slot.start + ' – ' + slot.stop
+                          + (slot.date !== response.start ? ' (' + slot.date + ')' : '')
+                          + '<br>';
+                });
+                msg2 += '</small>';
+            }
+            jQuery('#variation_message_2').removeClass('d-none').css('z-index', 1).html(msg2);
         } else {
             jQuery('#variation_price_2').html(response.variation_price_two);
             jQuery('#variation_btn_2').attr('data-product_id', response.variation_id_two);
@@ -74,7 +97,6 @@ function ajaxGetProductInfo(product_id = '') {
                 jQuery('#variation_message_2').addClass('d-none');
             }
         }
-
 
         if ( response.variation_id_one === parseInt(product_id) ) {
             jQuery('#variation_btn_1').addClass('inactive').html('AUSGEWÄHLT');

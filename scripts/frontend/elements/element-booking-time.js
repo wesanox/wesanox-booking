@@ -28,7 +28,8 @@ function ajaxGetStartDate() {
     let data = {
         action: 'element_booking_duration',
         start_time: start_time,
-        day: s.day
+        day: s.day,
+        area_id: s.area_id || 0
     };
 
     jQuery.post(ajax_object_time.ajax_url_time, data, function(response) {
@@ -41,11 +42,14 @@ function ajaxGetStartDate() {
 }
 
 function ajaxBookingTimeExists(day, start_time = '') {
+    const s = bookingStore.get();
+
     var data = {
         action: 'element_booking_time',
         nonce: ajax_object.nonce,
         day: day,
         start_time: start_time,
+        area_id: s.area_id || 0
     };
 
     jQuery.ajax({

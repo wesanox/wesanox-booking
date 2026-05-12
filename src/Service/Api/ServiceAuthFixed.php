@@ -1,13 +1,20 @@
 <?php
 
+/**
+ * @deprecated Use Wesanox\Booking\Service\Api\ServiceAuth instead.
+ *             ServiceAuth reads credentials from wp_options (wesanox_api_key / wesanox_api_secret_hash).
+ *             Set them via: update_option('wesanox_api_key', 'your-key');
+ *             update_option('wesanox_api_secret_hash', password_hash('your-secret', PASSWORD_BCRYPT));
+ */
 
 namespace Wesanox\Booking\Service\Api;
 
 defined('ABSPATH') || exit;
 
+/** @deprecated */
 class ServiceAuthFixed
 {
-    // ======= HIER DEINE FESTEN TEST-CREDENTIALS EINTRAGEN =======
+    // Credentials moved to wp_options. This class is kept for backward compatibility only.
     private const FIXED_KEY = '1827771200DSAJJAHHSDJD23999192ASDDDAA';
     private const FIXED_SECRET = 'TZJAJSDHSADJFHASDUASHDHFH1230998812812AAAA';
 

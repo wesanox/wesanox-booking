@@ -4,15 +4,21 @@ namespace Wesanox\Booking\View\Frontend\Elements;
 
 defined('ABSPATH' )|| exit;
 
+use Wesanox\Booking\Application\Booking\CalculateAvailableDurationsService;
+use Wesanox\Booking\Service\ServiceGetAvailableRoomarts;
 use Wesanox\Booking\Service\ServiceGetAvailableTimes;
 
 class ElementBookingDuration
 {
     protected ServiceGetAvailableTimes $service_get_times;
+    protected CalculateAvailableDurationsService $duration_service;
 
     public function __construct()
     {
-        $this->service_get_times = new ServiceGetAvailableTimes();
+        $this->service_get_times  = new ServiceGetAvailableTimes();
+        $this->duration_service   = new CalculateAvailableDurationsService(
+            new ServiceGetAvailableRoomarts()
+        );
 
         add_action('wp_ajax_element_booking_duration', [$this, 'wesanox_ajax_element_booking_duration']);
         add_action('wp_ajax_nopriv_element_booking_duration', [$this, 'wesanox_ajax_element_booking_duration']);
@@ -80,34 +86,34 @@ class ElementBookingDuration
             return;
         }
 
-        $closing_time_str = $this->service_get_times->get_opening_window($day)['opening_to'] ?? '24:00:00';
+        // Accept area_id from the request (forward-compatible; falls back to first area when absent).
+        $area_id          = isset($_POST['area_id']) ? absint($_POST['area_id']) : null;
+        $closing_time_str = $this->service_get_times->get_opening_window($day, $area_id ?: null)['opening_to'] ?? '24:00:00';
 
-        $closing_edge_ts = ($closing_time_str === '23:59:59')
-            ? strtotime(date('Y-m-d', $start_timestamp) . ' 24:00:00')
-            : strtotime(date('Y-m-d', $start_timestamp) . ' ' . $closing_time_str);
+        // Special case: 22:00 start with midnight closing → exactly 2 hours possible.
+        if ($datetime === '22:00') {
+            $html = '<select><option value="24:00" selected>2 Stunden</option></select>';
+            $response = [
+                'message' => 'AJAX-Request erfolgreich abgefangen',
+                'html'    => $html,
+            ];
+            wp_send_json($response);
+            return;
+        }
+
+        // Delegate to the Application service which checks both closing time AND room availability.
+        $options = $this->duration_service->execute($day, $datetime, $closing_time_str);
 
         $html_option = '';
-
-        for ($hours = 2; $hours <= 5; $hours++) {
-            $end_ts = strtotime("+{$hours} hours", $start_timestamp);
-
-            if ($end_ts > $closing_edge_ts && $datetime != '22:00') {
-                break;
+        foreach ($options as $i => $option) {
+            $value = $option['end_time'];
+            // Normalize midnight display
+            if ($value === '00:00') {
+                $value = '24:00';
             }
-
-            if($datetime == '22:00') {
-                $html_option .= '<option value="24:00" selected>2 Stunden</option>';
-                break;
-            }
-
-            $label_end = date('H:i', $end_ts);
-
-            if (date('H:i', $end_ts) === '00:00') {
-                $label_end = '24:00';
-            }
-
-            $selected = ($hours === 3) ? ' selected' : '';
-            $html_option .= '<option value="' . $label_end . '"' . $selected . '>' . $hours . ' Stunden</option>';
+            $selected     = ($option['hours'] === 3 || ($i === 0 && count($options) === 1)) ? ' selected' : '';
+            $html_option .= '<option value="' . esc_attr($value) . '"' . $selected . '>'
+                          . esc_html($option['label']) . '</option>';
         }
 
         $html = '<select>' . $html_option . '</select>';

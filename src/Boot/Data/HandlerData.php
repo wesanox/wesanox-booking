@@ -71,7 +71,8 @@ class HandlerData
      */
     public function wesanox_get_data(string $table_name)
     {
-        return $this->wpdb->get_results("SELECT * FROM " . $table_name);
+        // Table names cannot be parameterized via prepare(); caller must pass a trusted $wpdb->prefix value.
+        return $this->wpdb->get_results("SELECT * FROM `{$table_name}`");
     }
 
     /**
@@ -81,7 +82,9 @@ class HandlerData
      */
     public function wesanox_get_data_by_id(int $id, string $table_name)
     {
-        return $this->wpdb->get_row("SELECT * FROM $table_name WHERE id = " . $id);
+        return $this->wpdb->get_row(
+            $this->wpdb->prepare("SELECT * FROM `{$table_name}` WHERE id = %d", $id)
+        );
     }
 
     /**
@@ -91,7 +94,9 @@ class HandlerData
      */
     public function wesanox_get_data_by_mail(string $mail, string $table_name)
     {
-        return $this->wpdb->get_row("SELECT * FROM $table_name WHERE account_mail = '" . $mail . "'");
+        return $this->wpdb->get_row(
+            $this->wpdb->prepare("SELECT * FROM `{$table_name}` WHERE account_mail = %s", $mail)
+        );
     }
 
     /**
@@ -101,7 +106,9 @@ class HandlerData
      */
     public function wesanox_get_data_by_username(string $username, string $table_name)
     {
-        return $this->wpdb->get_row("SELECT * FROM $table_name WHERE account_username = '" . $username . "'");
+        return $this->wpdb->get_row(
+            $this->wpdb->prepare("SELECT * FROM `{$table_name}` WHERE account_username = %s", $username)
+        );
     }
 
     /**
