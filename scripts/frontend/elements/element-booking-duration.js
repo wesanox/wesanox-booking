@@ -26,10 +26,11 @@ jQuery(document).ready( function($) {
 
 function buildSoldOutHtml(slots, currentDay) {
     var html = '<div class="p-3 text-center w-100">'
-             + '<h5 class="fw-bold text-white mb-3">Ausgebucht</h5>';
+             + '<h5 class="fw-bold text-white mb-0">Ausgebucht</h5>';
 
     if (slots && slots.length > 0) {
-        html += '<div class="d-flex flex-column gap-2">';
+        html += '<p class="text-white-50 mb-2" style="font-size:.75rem;">Nächste verfügbare Zeiten:</p>'
+             + '<div class="d-flex flex-column gap-2">';
         jQuery.each(slots, function(i, slot) {
             var label = slot.start + ' – ' + slot.stop;
             if (slot.date !== currentDay) {
