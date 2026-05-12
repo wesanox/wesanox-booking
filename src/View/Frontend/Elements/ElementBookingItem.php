@@ -79,10 +79,11 @@ class ElementBookingItem
 
                                 $html .= '<div class="col bg-white mt-2 pb-3 px-0 position-relative">';
 
+                                $html .= '<div id="variation_message_' . $i . '" class="position-absolute w-100 h-100 d-none" style="top:0;left:0;z-index:10;"></div>';
+
                                 if ($image_url) {
                                     $html .= '
                                             <div class="w-100 overflow-hidden position-relative" style="height: 200px; max-height: 200px;">
-                                                <div id="variation_message_' . $i . '" class="position-absolute w-100 h-100 d-none"></div>
                                                 <img class="w-100 position-absolute bottom-0" src="' . esc_url($image_url) . '" alt="' . esc_attr($product->get_name()) . '"/>
                                             </div>';
                                 }
