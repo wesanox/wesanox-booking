@@ -50,7 +50,7 @@ class ElementBookingDuration
                             <a href="#check-in-out-slide" class="btn btn-primary d-flex justify-content-between align-items-center back mt-3">
                                 <span><</span> Zurück
                             </a>
-                            <a href="#room-slide" step="5" value="room-box" class="btn btn-primary d-flex justify-content-between align-items-center forward mt-3 active">
+                            <a href="#room-slide" step="5" value="room-box" class="btn btn-primary d-flex justify-content-between align-items-center forward mt-3 inactive">
                                 Weiter <span>></span>
                             </a>
                         </div>
@@ -72,37 +72,46 @@ class ElementBookingDuration
      */
     public function wesanox_ajax_element_booking_duration(): void
     {
-        if (isset($_POST['start_time']) && isset($_POST['day'])) {
-            $datetime = sanitize_text_field($_POST['start_time']);
-            $day = sanitize_text_field($_POST['day']);
-        } else {
-            $datetime = date('Y-m-d H:i:s');
-        }
+        $datetime = isset($_POST['start_time']) ? sanitize_text_field(wp_unslash($_POST['start_time'])) : '';
+        $day      = isset($_POST['day'])        ? sanitize_text_field(wp_unslash($_POST['day']))        : '';
 
         $start_timestamp = strtotime($datetime);
 
-        if ($start_timestamp === false) {
-            wp_send_json(array('message' => 'Ungültiges Startdatum'));
+        if ($datetime === '' || $day === '' || $start_timestamp === false) {
+            wp_send_json([
+                'message'   => 'Ungültiges Startdatum',
+                'html'      => $this->renderUnavailableMessage('Für diese Startzeit ist kein buchbarer Timeslot mehr frei.'),
+                'available' => false,
+            ]);
             return;
         }
 
         // Accept area_id from the request (forward-compatible; falls back to first area when absent).
-        $area_id          = isset($_POST['area_id']) ? absint($_POST['area_id']) : null;
-        $closing_time_str = $this->service_get_times->get_opening_window($day, $area_id ?: null)['opening_to'] ?? '24:00:00';
+        $area_id = isset($_POST['area_id']) ? absint(wp_unslash($_POST['area_id'])) : null;
+        $opening_window = $this->service_get_times->get_opening_window($day, $area_id ?: null);
 
-        // Special case: 22:00 start with midnight closing → exactly 2 hours possible.
-        if ($datetime === '22:00') {
-            $html = '<select><option value="24:00" selected>2 Stunden</option></select>';
-            $response = [
-                'message' => 'AJAX-Request erfolgreich abgefangen',
-                'html'    => $html,
-            ];
-            wp_send_json($response);
+        if (($opening_window['closed'] ?? false) || empty($opening_window['opening_to'])) {
+            wp_send_json([
+                'message'   => 'Keine freien Timeslots',
+                'html'      => $this->renderUnavailableMessage('An diesem Tag ist keine buchbare Dauer verfügbar.'),
+                'available' => false,
+            ]);
             return;
         }
 
+        $closing_time_str = $opening_window['opening_to'];
+
         // Delegate to the Application service which checks both closing time AND room availability.
         $options = $this->duration_service->execute($day, $datetime, $closing_time_str);
+
+        if (empty($options)) {
+            wp_send_json([
+                'message'   => 'Keine freien Timeslots',
+                'html'      => $this->renderUnavailableMessage('Für diese Startzeit ist kein buchbarer Timeslot mehr frei.'),
+                'available' => false,
+            ]);
+            return;
+        }
 
         $html_option = '';
         foreach ($options as $i => $option) {
@@ -119,11 +128,17 @@ class ElementBookingDuration
         $html = '<select>' . $html_option . '</select>';
 
         $response = array(
-            'message' => 'AJAX-Request erfolgreich abgefangen',
-            'html'    => $html,
+            'message'   => 'AJAX-Request erfolgreich abgefangen',
+            'html'      => $html,
+            'available' => true,
         );
 
         wp_send_json($response);
+    }
+
+    private function renderUnavailableMessage(string $message): string
+    {
+        return '<div class="col-12 p-2 text-center text-muted w-100">' . esc_html($message) . '</div>';
     }
 
     private function search_booking($start_time) {

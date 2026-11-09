@@ -24,7 +24,9 @@ final class FindNextAvailableSlotService
      * @param int    $roomartId        Room-type ID (e.g. 1 or 2)
      * @param string $fromYmdHis       Search from this date/time (Y-m-d H:i:s)
      * @param int    $durationMinutes  Desired duration in minutes
-     * @param int    $limit            Maximum number of results (default 3)
+     * @param int      $limit            Maximum number of results (default 3)
+     * @param int|null $areaId           Area whose opening hours and rooms apply
+     * @param int      $maxDaysAhead     Number of following days to include (0 = selected day only)
      * @return array<array{date: string, start: string, stop: string, roomart_id: int}>
      */
     public function execute(
@@ -32,12 +34,16 @@ final class FindNextAvailableSlotService
         string $fromYmdHis,
         int $durationMinutes,
         int $limit = 3,
+        ?int $areaId = null,
+        int $maxDaysAhead = 0,
     ): array {
         return $this->service->wesanox_get_next_available_for_roomart(
             $roomartId,
             $fromYmdHis,
             $durationMinutes,
             $limit,
+            $maxDaysAhead,
+            $areaId,
         );
     }
 }

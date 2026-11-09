@@ -13,6 +13,7 @@ use Wesanox\Booking\Infrastructure\Holiday\WordPressHolidayRepository;
 use Wesanox\Booking\Infrastructure\Rate\WordPressRateRepository;
 use Wesanox\Booking\Service\ServiceBookingTime;
 use Wesanox\Booking\Service\ServiceGetAvailableRoomarts;
+use Wesanox\Booking\Service\ServiceGetAvailableTimes;
 use Wesanox\Booking\Service\ServiceGetHolidayPrices;
 use Wesanox\Booking\Service\ServiceGetNextAvailableRoomarts;
 
@@ -177,6 +178,16 @@ class ElementBookingItem
             return;
         }
 
+        // Midnight is returned as 00:00 by the slot service but belongs to the following day.
+        if ($stopDt <= $startDt && $stopDt->format('H:i') === '00:00') {
+            $stopDt = $stopDt->modify('+1 day');
+        }
+
+        if ($stopDt <= $startDt) {
+            wp_send_json_error(['message' => 'Der ausgewählte Zeitraum ist ungültig.']);
+            return;
+        }
+
         $day_of_week = (int) $startDt->format('w');
         $startYmd    = $startDt->format('Y-m-d');
         $startHis    = $startDt->format('H:i:s');
@@ -194,24 +205,39 @@ class ElementBookingItem
         $has_vt = ($booking_time->vth ?? 0) > 0 || ($booking_time->vtmf ?? 0) > 0;
         $has_nt = ($booking_time->nth ?? 0) > 0 || ($booking_time->ntmf ?? 0) > 0;
 
+        $area_id = isset($_POST['area_id']) ? absint(wp_unslash($_POST['area_id'])) : 1;
+        if ($area_id <= 0) {
+            $area_id = 1;
+        }
+
+        $opening_window = ServiceGetAvailableTimes::get_opening_window($startYmd, $area_id);
+
+        if (($opening_window['closed'] ?? false)
+            || !$this->isWithinOpeningWindow($startDt, $stopDt, $opening_window, $tz)) {
+            wp_send_json_error([
+                'message' => 'Der ausgewählte Zeitraum ist an diesem Tag nicht buchbar.',
+            ]);
+            return;
+        }
+
         // ── Rate table lookup ────────────────────────────────────────────────────
-        // Try to find rates via the rates table (area_id 1 = Suite 1, area_id 2 = Suite 2).
+        // Try to find rates via the rates table (item_category_id 1 = Classic, 2 = Premium).
         // For bookings spanning 16:00, look up VT (before) and NT (after) segments separately.
         if ($has_vt && $has_nt) {
-            $rate_1_vt = $this->rate_service->execute(1, 0, $start_hi, '16:00', $startYmd);
-            $rate_1_nt = $this->rate_service->execute(1, 0, '16:00',   $stop_hi, $startYmd);
-            $rate_2_vt = $this->rate_service->execute(2, 0, $start_hi, '16:00', $startYmd);
-            $rate_2_nt = $this->rate_service->execute(2, 0, '16:00',   $stop_hi, $startYmd);
+            $rate_1_vt = $this->rate_service->execute($area_id, 1, $start_hi, '16:00', $startYmd);
+            $rate_1_nt = $this->rate_service->execute($area_id, 1, '16:00',   $stop_hi, $startYmd);
+            $rate_2_vt = $this->rate_service->execute($area_id, 2, $start_hi, '16:00', $startYmd);
+            $rate_2_nt = $this->rate_service->execute($area_id, 2, '16:00',   $stop_hi, $startYmd);
         } elseif ($has_vt) {
-            $rate_1_vt = $this->rate_service->execute(1, 0, $start_hi, $stop_hi, $startYmd);
+            $rate_1_vt = $this->rate_service->execute($area_id, 1, $start_hi, $stop_hi, $startYmd);
             $rate_1_nt = null;
-            $rate_2_vt = $this->rate_service->execute(2, 0, $start_hi, $stop_hi, $startYmd);
+            $rate_2_vt = $this->rate_service->execute($area_id, 2, $start_hi, $stop_hi, $startYmd);
             $rate_2_nt = null;
         } else {
             $rate_1_vt = null;
-            $rate_1_nt = $this->rate_service->execute(1, 0, $start_hi, $stop_hi, $startYmd);
+            $rate_1_nt = $this->rate_service->execute($area_id, 1, $start_hi, $stop_hi, $startYmd);
             $rate_2_vt = null;
-            $rate_2_nt = $this->rate_service->execute(2, 0, $start_hi, $stop_hi, $startYmd);
+            $rate_2_nt = $this->rate_service->execute($area_id, 2, $start_hi, $stop_hi, $startYmd);
         }
 
         $variation_price_one      = '';
@@ -436,7 +462,9 @@ class ElementBookingItem
                 1,
                 $startDt->format('Y-m-d H:i:s'),
                 $durationMinutes,
-                3
+                3,
+                $area_id,
+                0
             );
         }
 
@@ -445,7 +473,9 @@ class ElementBookingItem
                 2,
                 $startDt->format('Y-m-d H:i:s'),
                 $durationMinutes,
-                3
+                3,
+                $area_id,
+                0
             );
         }
 
@@ -475,6 +505,16 @@ class ElementBookingItem
         if ($spans_cutoff && $rate_vt !== null && $rate_nt !== null) {
             $vt_id   = $rate_vt->wc_variation_id ?? $rate_vt->wc_product_id;
             $nt_id   = $rate_nt->wc_variation_id ?? $rate_nt->wc_product_id;
+
+            if ((int) $vt_id === (int) $nt_id) {
+                $prod = wc_get_product($vt_id);
+                if (!$prod) {
+                    return ['', null];
+                }
+
+                return [number_format((float) $prod->get_price(), 2, ',', ''), $vt_id];
+            }
+
             $vt_prod = wc_get_product($vt_id);
             $nt_prod = wc_get_product($nt_id);
 
@@ -502,5 +542,38 @@ class ElementBookingItem
         }
 
         return [number_format((float) $prod->get_price(), 2, ',', ''), $id];
+    }
+
+    /**
+     * @param array{opening_from?: string, opening_to?: string} $openingWindow
+     */
+    private function isWithinOpeningWindow(
+        \DateTimeImmutable $start,
+        \DateTimeImmutable $stop,
+        array $openingWindow,
+        \DateTimeZone $timezone
+    ): bool {
+        $openingFrom = $openingWindow['opening_from'] ?? '';
+        $openingTo   = $openingWindow['opening_to'] ?? '';
+
+        if ($openingFrom === '' || $openingTo === '') {
+            return false;
+        }
+
+        $date = $start->format('Y-m-d');
+
+        try {
+            $from = new \DateTimeImmutable($date . ' ' . $openingFrom, $timezone);
+
+            if (in_array($openingTo, ['23:59:00', '23:59:59', '24:00', '24:00:00'], true)) {
+                $to = (new \DateTimeImmutable($date . ' 00:00:00', $timezone))->modify('+1 day');
+            } else {
+                $to = new \DateTimeImmutable($date . ' ' . $openingTo, $timezone);
+            }
+        } catch (\Exception) {
+            return false;
+        }
+
+        return $start >= $from && $stop <= $to;
     }
 }

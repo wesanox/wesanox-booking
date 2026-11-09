@@ -69,9 +69,14 @@ class ElementBookingTime
 
         $selected_day = isset($_POST['day']) ? sanitize_text_field( wp_unslash($_POST['day']) ) : '';
         $start_date   = isset($_POST['start_time']) ? sanitize_text_field( wp_unslash($_POST['start_time']) ) : '';
+        $area_id      = isset($_POST['area_id']) ? absint( wp_unslash($_POST['area_id']) ) : 0;
 
         if ($selected_day === '' && !empty($booking['day'])) {
             $selected_day = sanitize_text_field($booking['day']);
+        }
+
+        if ($area_id <= 0 && !empty($booking['area_id'])) {
+            $area_id = absint($booking['area_id']);
         }
 
         if ($start_date === '') {
@@ -86,7 +91,7 @@ class ElementBookingTime
             wp_send_json_error(['message' => 'Kein Datum übergeben und kein gespeicherter Tag vorhanden.'], 400);
         }
 
-        $html = $this->service_booking_time->getTimeSeparatet($selected_day, $start_date);
+        $html = $this->service_booking_time->getTimeSeparatet($selected_day, $start_date, $area_id ?: null);
 
         wp_send_json_success(['html' => $html]);
     }

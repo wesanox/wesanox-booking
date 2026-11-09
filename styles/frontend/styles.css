@@ -105,6 +105,13 @@
 #wesanox-booking table td.zabuto-calendar__day.fully-booked:after {
   background: red;
 }
+#wesanox-booking table td.zabuto-calendar__day.inactive, #wesanox-booking table td.zabuto-calendar__day.closed {
+  color: #9a9a9a;
+  cursor: default;
+}
+#wesanox-booking table td.zabuto-calendar__day.inactive:after, #wesanox-booking table td.zabuto-calendar__day.closed:after {
+  background: transparent;
+}
 #wesanox-booking table td.zabuto-calendar__day--today {
   position: relative;
   width: 40px;
@@ -124,6 +131,13 @@
 }
 #wesanox-booking table td.zabuto-calendar__day--today.fully-booked::after {
   background: red;
+}
+#wesanox-booking table td.zabuto-calendar__day--today.inactive, #wesanox-booking table td.zabuto-calendar__day--today.closed {
+  color: #9a9a9a;
+  cursor: default;
+}
+#wesanox-booking table td.zabuto-calendar__day--today.inactive::after, #wesanox-booking table td.zabuto-calendar__day--today.closed::after {
+  background: transparent;
 }
 #wesanox-booking table td.zabuto-calendar__day--empty {
   width: 40px;

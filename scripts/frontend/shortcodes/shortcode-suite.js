@@ -64,6 +64,13 @@
                 .replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
         function syncStore() {
             if (typeof bookingStore !== 'undefined') {
                 bookingStore.set({
@@ -200,11 +207,34 @@
 
         // ── render product cards ──────────────────────────────────────────────
 
+        function renderNextSlots(slots, currentDay) {
+            if (!slots || !slots.length) {
+                return '<p class="text-muted small mb-0 mt-2">Aktuell ist kein nächster freier Slot verfügbar.</p>';
+            }
+
+            var html = '<div class="wsn-next-slots mt-3">'
+                + '<div class="text-muted small mb-2">Nächste verfügbare Zeiten:</div>';
+
+            html += slots.map(function (slot) {
+                var label = escHtml(slot.start + ' - ' + slot.stop);
+                if (slot.date !== currentDay) {
+                    label += '<br><small>' + escHtml(slot.date) + '</small>';
+                }
+
+                return '<div class="btn btn-outline-primary btn-sm w-100 mb-2 disabled">'
+                    + label
+                    + '</div>';
+            }).join('');
+
+            return html + '</div>';
+        }
+
         function renderItems(res) {
             var cards = [
-                { n: 1, price: res.variation_price_one, varId: res.variation_id_one, available: res.available_one },
-                { n: 2, price: res.variation_price_two, varId: res.variation_id_two, available: res.available_two },
+                { n: 1, price: res.variation_price_one, varId: res.variation_id_one, available: res.available_one, next: res.next_available_one },
+                { n: 2, price: res.variation_price_two, varId: res.variation_id_two, available: res.available_two, next: res.next_available_two },
             ];
+            var currentDay = res.start ? String(res.start).substring(0, 10) : state.checkin;
             var html = cards.map(function (c) {
                 var priceHtml = c.price
                     ? '<div class="wsn-item-card__price"><strong>' + c.price + ' €</strong>' +
@@ -213,7 +243,8 @@
                     : '';
                 var btnHtml = c.available
                     ? '<button class="btn btn-primary wsn-book-btn w-100 mt-3" data-product-id="' + escAttr(String(c.varId)) + '">Jetzt buchen</button>'
-                    : '<button class="btn btn-primary wsn-book-btn w-100 mt-3" disabled>Ausgebucht</button>';
+                    : '<button class="btn btn-primary wsn-book-btn w-100 mt-3" disabled>Ausgebucht</button>'
+                        + renderNextSlots(c.next, currentDay);
                 return '<div class="wsn-item-card bg-white p-3">' +
                     '<h5 class="text-blue text-uppercase">Suite ' + c.n + '</h5>' +
                     '<hr class="my-2">' +

@@ -1,6 +1,7 @@
 jQuery(document).ready(function($) {
     const CAL  = '#calendar';
     const BTN  = '#count-days-btn';
+    const ACTIVE_DAY_SELECTOR = '.zabuto-calendar__day.active, .zabuto-calendar__day--today.active';
 
     $('body').on('click', '#check-in-out-box-back', function() {
         $('#element-booking-calender').removeClass('d-none');
@@ -60,10 +61,11 @@ jQuery(document).ready(function($) {
         const s = bookingStore.get();
         if (!s.day) return;
 
-        const sel = `.zabuto-calendar__day[data-date="${formatYMD(s.day)}"]`;
+        const ymd = formatYMD(s.day);
+        const sel = `.zabuto-calendar__day[data-date="${ymd}"], .zabuto-calendar__day--today[data-date="${ymd}"]`;
         const $el = $(sel);
         if ($el.length && !$el.hasClass('inactive') && !$el.hasClass('fully-booked')) {
-            $('.zabuto-calendar__day.active').removeClass('active').attr('day','');
+            $(ACTIVE_DAY_SELECTOR).removeClass('active').attr('day','');
             $el.addClass('active').attr('day', new Date(s.day).toDateString());
             $(BTN).removeClass('inactive').addClass('active');
         }
@@ -72,18 +74,19 @@ jQuery(document).ready(function($) {
 
     $(CAL).on('zabuto:calendar:day', function (e) {
         const now = new Date();
-
-        $('.zabuto-calendar__day.active').removeClass('active').attr('day','');
+        const $day = $(e.element);
 
         const isSelectable =
-            !$(e.element).hasClass('fully-booked') &&
+            ($day.hasClass('available') || $day.hasClass('middle')) &&
             (e.today || e.date.getTime() > now.getTime());
 
         if (!isSelectable) return;
 
-        $(e.element).addClass('active').attr('day', e.date.toDateString());
+        $(ACTIVE_DAY_SELECTOR).removeClass('active').attr('day','');
+        $day.addClass('active').attr('day', e.date.toDateString());
 
         const s = bookingStore.get();
+        const preferredDuration = window.wesanoxBookingTime ? window.wesanoxBookingTime.preferredDurationMinutes(s) : null;
         // if (s.product_id) {
         //     $.post(ajax_object,ajax_url, { action: 'delete_cart_only_booking' }, function() {
         //         bookingStore.set({ extras: [] });
@@ -92,7 +95,13 @@ jQuery(document).ready(function($) {
         // }
 
         const pickedYMD = formatYMD(e.date);
-        bookingStore.set({ day: pickedYMD });
+        bookingStore.set({
+            day: pickedYMD,
+            stop_time: null,
+            how_long: null,
+            duration_minutes: preferredDuration,
+            product_id: null
+        });
 
         ajaxBookingTime(pickedYMD);
 
@@ -133,6 +142,28 @@ function ajaxBookingTime(day) {
             } else {
                 jQuery('#booking-time-box').html('<div class="col-12 p-2 text-center text-muted">Keine Zeiten gefunden.</div>');
                 jQuery('#element-booking-time').removeClass('d-none');
+            }
+
+            const current = bookingStore.get();
+            const preferred = window.wesanoxBookingTime ? window.wesanoxBookingTime.preferredDurationMinutes(current) : null;
+            const $activeTime = jQuery('#booking-time-box .time-box.active');
+
+            if (current.start_time && $activeTime.length && typeof ajaxRefreshDurationForStart === 'function') {
+                bookingStore.set({
+                    stop_time: null,
+                    how_long: null,
+                    duration_minutes: preferred,
+                    product_id: null
+                });
+                ajaxRefreshDurationForStart(current.start_time, preferred);
+            } else if (current.start_time) {
+                bookingStore.set({
+                    start_time: null,
+                    stop_time: null,
+                    how_long: null,
+                    duration_minutes: preferred,
+                    product_id: null
+                });
             }
 
             if (jQuery(window).width() < 765) {

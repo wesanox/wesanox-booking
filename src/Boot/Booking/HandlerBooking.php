@@ -22,6 +22,8 @@ use function PHPUnit\Framework\isArray;
  */
 class HandlerBooking
 {
+    private static bool $hooks_registered = false;
+
     private TriggerOrderSyncService $syncService;
 
     public function __construct()
@@ -29,8 +31,16 @@ class HandlerBooking
         $bridge            = new WesanoxApiBridge();
         $this->syncService = new TriggerOrderSyncService($bridge);
 
+        if (self::$hooks_registered) {
+            return;
+        }
+
         add_action('woocommerce_checkout_order_processed', [$this, 'handleOrder'], 10, 1);
         add_action('woocommerce_order_status_changed',     [$this, 'handleOrder'], 10, 4);
+        // Fired by wesanox-coupon when gift cards are created without an order status change.
+        add_action('wesanox_gift_order_coupons_created',   [$this, 'handleOrder'], 10, 1);
+
+        self::$hooks_registered = true;
     }
 
     public function handleOrder(int|string $orderId): void
@@ -48,8 +58,10 @@ class HandlerBooking
         $endTime   = $order->get_meta('Endzeit',   true);
 
         if (!$startTime || !$endTime) {
-            $this->notifyMissingMeta($order, $orderId);
-            return;
+            if (!$this->isGiftCouponOrder($order)) {
+                $this->notifyMissingMeta($order, $orderId);
+                return;
+            }
         }
 
         $credentialId = $this->resolveCredentialId($order);
@@ -156,6 +168,30 @@ class HandlerBooking
         }
 
         return 0;
+    }
+
+    /**
+     * Returns true when the order contains the gift-coupon product configured in
+     * wesanox-coupon (option wesan_coupon_gift_product_id).
+     *
+     * Falls back to false when wesanox-coupon is not installed or the option is
+     * not set — no hard dependency on the plugin.
+     */
+    private function isGiftCouponOrder(\WC_Order $order): bool
+    {
+        $giftProductId = (int) get_option('wesan_coupon_gift_product_id', 0);
+
+        if ($giftProductId <= 0) {
+            return false;
+        }
+
+        foreach ($order->get_items() as $item) {
+            if ((int) $item->get_product_id() === $giftProductId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function notifyMissingMeta(\WC_Order $order, int $orderId): void

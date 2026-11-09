@@ -12,6 +12,7 @@ use Wesanox\Booking\Rest\RestService;
 use Wesanox\Booking\Infrastructure\Activation\Activator;
 use Wesanox\Booking\Infrastructure\Activation\Deactivator;
 use Wesanox\Booking\Boot\Booking\HandlerBooking;
+use Wesanox\Booking\Woocommerce\BookingCancellationEmailFilter;
 use Wesanox\Booking\Woocommerce\WoocommerceProductHandler;
 
 final class Plugin
@@ -37,6 +38,8 @@ final class Plugin
         // Legacy WooCommerce integration (constructor registers hooks)
         new HandlerBooking();
         new WoocommerceProductHandler();
+
+        (new BookingCancellationEmailFilter())->register();
 
         $services = [
             new AdminService(),

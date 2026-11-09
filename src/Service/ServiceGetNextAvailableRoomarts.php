@@ -29,7 +29,8 @@ class ServiceGetNextAvailableRoomarts
      * @param string|null $fromYmdHis         Startzeitpunkt (Y-m-d H:i:s). Null => jetzt (gerundet auf nächstes 15er-Intervall).
      * @param int         $durationMinutes    Gewünschte Dauer in Minuten (z. B. 120).
      * @param int         $limit              Wie viele Treffer zurückgeben (z. B. 5).
-     * @param int         $maxDaysAhead       Wie viele Tage maximal nach vorne suchen (z. B. 14).
+     * @param int         $maxDaysAhead       Wie viele Folgetage durchsucht werden (0 = nur der ausgewählte Tag).
+     * @param int|null    $areaId             Area für Öffnungszeiten und Raumverfügbarkeit.
      * @return array[]    Liste aus Treffern: [
      *   ['date' => 'Y-m-d', 'start' => 'H:i', 'stop' => 'H:i', 'roomart_id' => X]
      * ]
@@ -39,7 +40,8 @@ class ServiceGetNextAvailableRoomarts
         ?string $fromYmdHis = null,
         int $durationMinutes = 120,
         int $limit = 5,
-        int $maxDaysAhead = 14
+        int $maxDaysAhead = 90,
+        ?int $areaId = null
     ): array {
         $tz = wp_timezone();
 
@@ -51,13 +53,13 @@ class ServiceGetNextAvailableRoomarts
         $startDT = $this->roundUpToQuarter($startDT);
 
         $results = [];
-        $oneDay  = new DateInterval('P1D');
+        $maxDaysAhead = max(0, $maxDaysAhead);
 
         for ($d = 0; $d <= $maxDaysAhead; $d++) {
             $currentDate = (clone $startDT)->add(new DateInterval("P{$d}D"))->format('Y-m-d');
 
             // Öffnungszeiten für den Tag ermitteln (nutzt deine bestehende Logik aus ServiceGetAvailableTimes)
-            [$openingFrom, $openingToNorm] = $this->get_opening_bounds_for_day($currentDate);
+            [$openingFrom, $openingToNorm] = $this->get_opening_bounds_for_day($currentDate, $areaId);
 
             if ($openingFrom === null || $openingToNorm === null) {
                 // geschlossen
@@ -95,7 +97,8 @@ class ServiceGetNextAvailableRoomarts
                     $roomartId,
                     $currentDate,
                     date('H:i:s', $startTs),
-                    date('H:i:s', $stopTs)
+                    date('H:i:s', $stopTs),
+                    $areaId
                 );
 
                 // Wenn deine Funktion einen Bool liefert: if ($availableCountOrBool)
@@ -123,9 +126,9 @@ class ServiceGetNextAvailableRoomarts
      *
      * @return array{0: string|null, 1: string|null}  [openingFrom, openingToNorm] or [null, null] if closed.
      */
-    private function get_opening_bounds_for_day(string $ymd): array
+    private function get_opening_bounds_for_day(string $ymd, ?int $areaId = null): array
     {
-        $ow = ServiceGetAvailableTimes::get_opening_window($ymd);
+        $ow = ServiceGetAvailableTimes::get_opening_window($ymd, $areaId);
 
         if ($ow['closed'] ?? false) {
             return [null, null];
@@ -149,7 +152,7 @@ class ServiceGetNextAvailableRoomarts
         return $slots;
     }
 
-    /** Auf nächstes 15er Intervall runden, aber nicht über 22:00 raus */
+    /** Auf das nächste 15-Minuten-Intervall runden. */
     private function roundUpToQuarter(DateTime $dt): DateTime
     {
         $m = (int)$dt->format('i');

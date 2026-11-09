@@ -51,10 +51,10 @@ final class SaveRateService
             $errors[] = 'Eine Area ist erforderlich.';
         }
 
-        // Validate item category exists (0 = global, no specific category).
-        if ($item_category_id < 0) {
-            $errors[] = 'Ungültige Item-Kategorie.';
-        } elseif ($item_category_id > 0 && !$this->categories->findById($item_category_id)) {
+        // Validate item category exists.
+        if ($item_category_id <= 0) {
+            $errors[] = 'Eine Item-Kategorie ist erforderlich.';
+        } elseif (!$this->categories->findById($item_category_id)) {
             $errors[] = 'Die Item-Kategorie existiert nicht.';
         }
 
@@ -104,7 +104,7 @@ final class SaveRateService
         if (
             empty($errors)
             && $area_id > 0
-            && $item_category_id >= 0
+            && $item_category_id > 0
             && !empty($days)
             && $this->isValidTime($time_from)
             && $this->isValidTime($time_to)

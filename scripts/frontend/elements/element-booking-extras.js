@@ -30,6 +30,59 @@ jQuery(function($){
         $('.add-var-to-cart-btn').first().removeClass('inactive').addClass('active');
     });
 
+    $('body').on('input', '.booking-specials-notice', function () {
+        const specialsNotice = $(this).val();
+
+        bookingStore.set({ specials_notice: specialsNotice });
+        $('.booking-specials-notice').not(this).val(specialsNotice);
+    });
+
+    $('body').on('change', '.booking-has-specials-notice', function () {
+        const hasSpecialsNotice = $(this).is(':checked');
+
+        $('.booking-has-specials-notice')
+            .prop('checked', hasSpecialsNotice)
+            .attr('aria-expanded', hasSpecialsNotice ? 'true' : 'false');
+        $('.booking-specials-notice-field').toggleClass('d-none', !hasSpecialsNotice);
+
+        if (!hasSpecialsNotice) {
+            $('.booking-specials-notice').val('');
+            bookingStore.set({ specials_notice: '' });
+        }
+    });
+
+    $('body').on('click', '.booking-extras-continue', function (e) {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
+            return;
+        }
+
+        e.preventDefault();
+
+        const $link = $(this);
+        const href = $link.attr('href');
+        if (typeof syncBookingToServer !== 'function') {
+            window.location.href = href;
+            return;
+        }
+
+        $link.addClass('inactive').attr('aria-disabled', 'true');
+
+        syncBookingToServer()
+            .done(function (response) {
+                if (!response || response.success === false) {
+                    restoreExtrasContinueLink($link);
+                    showSpecialsNoticeError('Der Hinweis konnte nicht gespeichert werden. Bitte versuche es erneut.');
+                    return;
+                }
+
+                window.location.href = href;
+            })
+            .fail(function () {
+                restoreExtrasContinueLink($link);
+                showSpecialsNoticeError('Der Hinweis konnte nicht gespeichert werden. Bitte versuche es erneut.');
+            });
+    });
+
     $('body').on('click', '.add-var-to-cart-btn', function (e) {
         e.preventDefault();
 
@@ -121,6 +174,17 @@ jQuery(function($){
         });
     });
 
+    function restoreExtrasContinueLink($link) {
+        $link.removeClass('inactive').removeAttr('aria-disabled');
+    }
+
+    function showSpecialsNoticeError(message) {
+        $('#message')
+            .addClass('text-danger')
+            .removeClass('d-none')
+            .text(message);
+    }
+
     // --- Personen +/- (im Extra-Modal; beeinflusst nur Anzeige im Modal) -------
     $('body').on('click', '.button-person', function(){
         const s = bookingStore.get();
@@ -153,7 +217,28 @@ function changeCount(change_count, product_id) {
             person_count: change_count,
             product_id: product_id
         }, function(res){
-            jQuery('#modal-extra-box_' + product_id).html(res.html);
+            const $container = jQuery('#modal-extra-box_' + product_id);
+            $container.html(res.html);
+
+            const $specialsNotice = $container.find('.booking-specials-notice');
+            if (!$specialsNotice.length) return;
+
+            const storedSpecialsNotice = bookingStore.get().specials_notice || '';
+            const $hasSpecialsNotice = $container.find('.booking-has-specials-notice');
+            const $specialsNoticeField = $container.find('.booking-specials-notice-field');
+
+            if (storedSpecialsNotice) {
+                $specialsNotice.val(storedSpecialsNotice);
+                $hasSpecialsNotice.prop('checked', true).attr('aria-expanded', 'true');
+                $specialsNoticeField.removeClass('d-none');
+            } else if ($specialsNotice.val()) {
+                bookingStore.set({ specials_notice: $specialsNotice.val() });
+                $hasSpecialsNotice.prop('checked', true).attr('aria-expanded', 'true');
+                $specialsNoticeField.removeClass('d-none');
+            } else {
+                $hasSpecialsNotice.prop('checked', false).attr('aria-expanded', 'false');
+                $specialsNoticeField.addClass('d-none');
+            }
         });
     }
 }

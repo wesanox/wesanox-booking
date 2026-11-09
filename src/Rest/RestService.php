@@ -7,6 +7,8 @@ namespace Wesanox\Booking\Rest;
 defined('ABSPATH') || exit;
 
 use Wesanox\Booking\Rest\Controllers\BookingController;
+use Wesanox\Booking\Rest\Controllers\ItemStatusController;
+use Wesanox\Booking\Rest\Controllers\OpeningHoursController;
 
 final class RestService
 {
@@ -22,5 +24,11 @@ final class RestService
     {
         $controller = new BookingController();
         $controller->registerRoutes();
+
+        $openingHoursController = new OpeningHoursController();
+        $openingHoursController->registerRoutes();
+
+        $itemStatusController = new ItemStatusController();
+        $itemStatusController->registerRoutes();
     }
 }

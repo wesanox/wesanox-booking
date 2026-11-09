@@ -19,8 +19,14 @@ function create_wesanox_holidays_table()
         opening_holiday TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
 
         area_id BIGINT(20) UNSIGNED NULL,
+        external_source VARCHAR(40) NULL,
+        external_id VARCHAR(191) NULL,
+        external_area_id VARCHAR(191) NULL,
+        created_at DATETIME NULL,
+        updated_at DATETIME NULL,
 
-        PRIMARY KEY (id)
+        PRIMARY KEY (id),
+        KEY external_lookup (area_id, external_source, external_id)
     ) $charset_collate;";
 
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');

@@ -172,14 +172,21 @@
 
 				self.render();
 			} else if (handle.type === 'ajax') {
-				var ajaxSettings = handle.settings;
+				var ajaxSettings = $.extend(true, {}, handle.settings.ajax_settings || {}, handle.settings);
+				delete ajaxSettings.ajax_settings;
+
+				var ajaxData = {};
+				if ($.isPlainObject(ajaxSettings.data)) {
+					ajaxData = ajaxSettings.data;
+				}
+
 				ajaxSettings.type = 'POST';
-				ajaxSettings.data = {
+				ajaxSettings.data = $.extend({}, ajaxData, {
 					year: element.data('year'),
 					month: element.data('month'),
 					action: 'booking_calender_render',   // WordPress AJAX Action
 					_ajax_nonce: ajax_object.nonce
-				};
+				});
 				ajaxSettings.dataType = 'json';
 
 				$.ajax(ajaxSettings)

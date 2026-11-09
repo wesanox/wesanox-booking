@@ -1,8 +1,9 @@
 jQuery(document).ready(function($){
     const s = bookingStore.get();
 
-    if( s.start_time ) {
-        ajaxBookingTimeExists(s.day);
+    // Load the times of the day the calendar shows as selected; only fall back to today without a stored day.
+    if( s.day ) {
+        ajaxBookingTimeExists(s.day, s.start_time || '');
     } else {
         ajaxBookingTimeExists(new Date().toLocaleDateString('de-DE'));
     }
@@ -23,7 +24,21 @@ jQuery(document).ready(function($){
 function ajaxGetStartDate() {
     const s = bookingStore.get();
     let start_time = s.start_time;
-    let day = new Date(s.day);
+
+    ajaxRefreshDurationForStart(start_time, null, function(durationState) {
+        if (durationState && durationState.duration_minutes && window.wesanoxBookingTime) {
+            checkedSvgNav('#how-long-time', '.how-long', window.wesanoxBookingTime.hoursLabel(durationState.duration_minutes));
+        }
+
+        jQuery('#loading-four').hide();
+    });
+}
+
+function ajaxRefreshDurationForStart(start_time, preferredDurationMinutes, callback) {
+    const s = bookingStore.get();
+    const preferred = preferredDurationMinutes || (
+        window.wesanoxBookingTime ? window.wesanoxBookingTime.preferredDurationMinutes(s) : null
+    );
 
     let data = {
         action: 'element_booking_duration',
@@ -33,11 +48,84 @@ function ajaxGetStartDate() {
     };
 
     jQuery.post(ajax_object_time.ajax_url_time, data, function(response) {
-        jQuery('#how-long-selected').html(response.html);
+        var html = '';
+        if (response && response.success && response.data && typeof response.data.html !== 'undefined') {
+            html = response.data.html;
+        } else if (response && typeof response.html !== 'undefined') {
+            html = response.html;
+        } else {
+            html = '<div class="col-12 p-2 text-center text-muted w-100">Für diese Startzeit ist kein buchbarer Timeslot mehr frei.</div>';
+        }
 
-        checkedSvgNav('#check-in-out', '.day', day.toLocaleDateString('de-DE') + ' ' + start_time);
+        jQuery('#how-long-selected').html(html);
 
-        jQuery('#loading-four').hide();
+        var available = true;
+        if (response && response.success === false) {
+            available = false;
+        }
+        if (response && response.data && response.data.available === false) {
+            available = false;
+        }
+        if (response && response.available === false) {
+            available = false;
+        }
+
+        var $select = jQuery('#how-long-selected select');
+        if (!available || !$select.length || !$select.find('option').length) {
+            bookingStore.set({
+                stop_time: null,
+                duration_minutes: null,
+                how_long: null,
+                product_id: null
+            });
+            jQuery('#element-booking-duration a.forward').removeClass('active').addClass('inactive');
+
+            if (typeof updateBookingRangeNav === 'function') {
+                updateBookingRangeNav();
+            }
+
+            if (typeof callback === 'function') {
+                callback({
+                    available: false,
+                    stop_time: null,
+                    duration_minutes: null,
+                    how_long: null
+                });
+            }
+            return;
+        }
+
+        var durationState = window.wesanoxBookingTime
+            ? window.wesanoxBookingTime.applyDurationSelection('#how-long-selected select', start_time, preferred)
+            : null;
+
+        if (!durationState) {
+            var fallbackStop = jQuery('#how-long-selected select').val() || '';
+            durationState = window.wesanoxBookingTime
+                ? window.wesanoxBookingTime.stateForTimes(start_time, fallbackStop)
+                : { stop_time: fallbackStop, duration_minutes: null, how_long: getHourDiff(start_time, fallbackStop) };
+        }
+
+        bookingStore.set({
+            stop_time: durationState.stop_time || null,
+            duration_minutes: durationState.duration_minutes || null,
+            how_long: durationState.how_long || null,
+            product_id: null
+        });
+
+        if (durationState.duration_minutes && window.wesanoxBookingTime) {
+            checkedSvgNav('#how-long-time', '.how-long', window.wesanoxBookingTime.hoursLabel(durationState.duration_minutes));
+        }
+
+        jQuery('#element-booking-duration a.forward').removeClass('inactive').addClass('active');
+
+        if (typeof updateBookingRangeNav === 'function') {
+            updateBookingRangeNav();
+        }
+
+        if (typeof callback === 'function') {
+            callback(durationState);
+        }
     });
 }
 
@@ -66,6 +154,28 @@ function ajaxBookingTimeExists(day, start_time = '') {
             } else {
                 jQuery('#booking-time-box').html('<div class="col-12 p-2 text-center text-muted">Keine Zeiten gefunden.</div>');
             }
+
+            const current = bookingStore.get();
+            const preferred = window.wesanoxBookingTime ? window.wesanoxBookingTime.preferredDurationMinutes(current) : null;
+            const $activeTime = jQuery('#booking-time-box .time-box.active');
+
+            if (current.start_time && $activeTime.length) {
+                bookingStore.set({
+                    stop_time: null,
+                    how_long: null,
+                    duration_minutes: preferred,
+                    product_id: null
+                });
+                ajaxRefreshDurationForStart(current.start_time, preferred);
+            } else if (current.start_time) {
+                bookingStore.set({
+                    start_time: null,
+                    stop_time: null,
+                    how_long: null,
+                    duration_minutes: preferred,
+                    product_id: null
+                });
+            }
         })
         .fail(function () {
             jQuery('#booking-time-box').html('<div class="col-12 p-2 text-center text-danger">Fehler beim Laden.</div>');
@@ -88,7 +198,18 @@ function ajaxBookingTimeSelected() {
             });
         }
 
-        bookingStore.set({ start_time: jQuery(this).data('start-time') });
+        const preferred = window.wesanoxBookingTime ? window.wesanoxBookingTime.preferredDurationMinutes(s) : null;
+        const startTime = jQuery(this).data('start-time');
+
+        bookingStore.set({
+            start_time: startTime,
+            stop_time: null,
+            how_long: null,
+            duration_minutes: preferred,
+            product_id: null
+        });
+
+        ajaxRefreshDurationForStart(startTime, preferred);
 
         jQuery('#element-booking-time a.forward').removeClass('inactive').addClass('active');
     });

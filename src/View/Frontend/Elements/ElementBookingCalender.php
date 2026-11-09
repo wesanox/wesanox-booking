@@ -4,15 +4,19 @@ namespace Wesanox\Booking\View\Frontend\Elements;
 
 defined( 'ABSPATH' )|| exit;
 
+use Wesanox\Booking\Domain\Booking\CalendarDayStatus;
+use Wesanox\Booking\Repository\RepositoryBooking;
 use Wesanox\Booking\Service\ServiceGetAvailableTimes;
 
 class ElementBookingCalender
 {
     protected ServiceGetAvailableTimes $service_get_times;
+    protected RepositoryBooking $repository_booking;
 
     public function __construct()
     {
-        $this->service_get_times = new ServiceGetAvailableTimes();
+        $this->service_get_times  = new ServiceGetAvailableTimes();
+        $this->repository_booking = new RepositoryBooking();
 
         add_action('wp_ajax_booking_calender_render', [$this, 'wesanox_ajax_element_booking_calender']);
         add_action('wp_ajax_nopriv_booking_calender_render', [$this, 'wesanox_ajax_element_booking_calender']);
@@ -69,8 +73,6 @@ class ElementBookingCalender
      */
     public function wesanox_ajax_element_booking_calender(): void
     {
-        global $wpdb;
-
         $year  = isset($_REQUEST['year'])  ? (int) $_REQUEST['year']  : (int) date('Y');
         $month = isset($_REQUEST['month']) ? (int) $_REQUEST['month'] : (int) date('m');
         if ($month < 1 || $month > 12) {
@@ -82,8 +84,6 @@ class ElementBookingCalender
 
         $booking    = ( function_exists('WC') && WC()->session ) ? (array) WC()->session->get('booking', []) : [];
         $selected   = !empty($booking['day']) ? sanitize_text_field($booking['day']) : null; // "YYYY-MM-DD"
-
-        $bookings_table = $wpdb->prefix . 'wesanox_bookings';
 
         $events = [];
         for ($day = 1; $day <= $days_month; $day++) {
@@ -98,29 +98,11 @@ class ElementBookingCalender
             $area_id = isset($_REQUEST['area_id']) ? absint($_REQUEST['area_id']) : null;
             $result  = $this->service_get_times->wesanox_get_available_times($date, $area_id ?: null);
 
-            if (is_array($result) && isset($result['closed']) && (int)$result['closed'] === 1) {
-                $classname = 'inactive';
-            } elseif (is_array($result) && empty($result)) {
-                $classname = 'fully-booked';
-            } else {
-                $classname = 'available';
-            }
+            $is_bookable  = !(is_array($result) && ($result === [] || (int) ($result['closed'] ?? 0) === 1));
+            $active_count = $is_bookable ? $this->repository_booking->count_active_bookings_for_date($date) : 0;
+            $classname    = CalendarDayStatus::resolve($result, $active_count);
 
-            // **NEU**: Buchungsanzahl für den Tag prüfen
-            if ($classname === 'available') {
-                $countForDay = (int) $wpdb->get_var(
-                    $wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$bookings_table} WHERE booking_date = %s",
-                        $date
-                    )
-                );
-
-                if ($countForDay > 10) {
-                    $classname = 'middle';
-                }
-            }
-
-            $active = ($selected && $date === $selected) ? ' active' : '';
+            $active = ($selected && $date === $selected && in_array($classname, [CalendarDayStatus::AVAILABLE, CalendarDayStatus::BUSY], true)) ? ' active' : '';
 
             $events[] = [
                 'date'      => $date,

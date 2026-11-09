@@ -88,6 +88,14 @@
             &:after
               background: red
 
+          &.inactive,
+          &.closed
+            color: #9a9a9a
+            cursor: default
+
+            &:after
+              background: transparent
+
           &--today
             position: relative
             width: 40px
@@ -108,6 +116,14 @@
             &.fully-booked
               &::after
                 background: red
+
+            &.inactive,
+            &.closed
+              color: #9a9a9a
+              cursor: default
+
+              &::after
+                background: transparent
 
           &--empty
             width: 40px

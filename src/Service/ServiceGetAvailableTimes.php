@@ -4,7 +4,9 @@ namespace Wesanox\Booking\Service;
 
 defined('ABSPATH') || exit;
 
+use Wesanox\Booking\Domain\Booking\BookingOccupancy;
 use DateTime;
+use Wesanox\Booking\Repository\RepositoryBooking;
 
 class ServiceGetAvailableTimes
 {
@@ -111,11 +113,8 @@ class ServiceGetAvailableTimes
                 } else {
                     // Priority 4: Hardcoded defaults
                     if ($currentDay >= 1 && $currentDay <= 4) {
-                        $openingFrom = '12:00';
+                        $openingFrom = '10:00';
                         $openingTo   = '22:00';
-                    } elseif ($currentDay == 5) {
-                        $openingFrom = '12:00';
-                        $openingTo   = '24:00';
                     } elseif ($currentDay == 7) {
                         $openingFrom = '10:00';
                         $openingTo   = '22:00';
@@ -256,21 +255,47 @@ class ServiceGetAvailableTimes
     {
         global $wpdb;
 
+        self::cleanup_expired_checkout_holds();
+
         $tz             = wp_timezone();
         $rooms_table    = $wpdb->prefix . 'wesanox_rooms';
+        $items_table    = $wpdb->prefix . 'wesanox_items';
         $bookings_table = $wpdb->prefix . 'wesanox_bookings';
         $orders_table   = $wpdb->prefix . 'wc_orders';
 
-        $rooms = $wpdb->get_results("
-            SELECT id
-            FROM {$rooms_table}
-            WHERE room_inactive = 0
-        ");
+        $rooms = $wpdb->get_results(
+            $wpdb->prepare(
+                "
+                SELECT r.id
+                FROM {$rooms_table} r
+                LEFT JOIN {$items_table} i ON i.id = r.id
+                WHERE (r.room_inactive IS NULL OR r.room_inactive = 0)
+                  AND NOT (
+                        r.room_inactiv_from IS NOT NULL
+                    AND r.room_inactiv_from <= %s
+                    AND (r.room_inactiv_to IS NULL OR r.room_inactiv_to >= %s)
+                  )
+                  AND NOT (
+                        i.id IS NOT NULL
+                    AND i.inactive = 1
+                    AND (
+                            (i.inactiv_from IS NULL AND i.inactiv_to IS NULL)
+                        OR  (i.inactiv_from IS NOT NULL AND i.inactiv_from <= %s AND (i.inactiv_to IS NULL OR i.inactiv_to >= %s))
+                    )
+                  )
+                ",
+                $inputDate,
+                $inputDate,
+                $inputDate,
+                $inputDate
+            )
+        );
 
         if (empty($rooms)) return [];
 
         $excluded_post_statuses = ['wc-cancelled','wc-refunded','wc-failed','trash'];
         $placeholders = implode(',', array_fill(0, count($excluded_post_statuses), '%s'));
+        $not_cancelled = BookingOccupancy::notCancelledSql('b');
 
         $bookings = $wpdb->get_results(
             $wpdb->prepare(
@@ -278,7 +303,7 @@ class ServiceGetAvailableTimes
                  FROM {$bookings_table} b
                  LEFT JOIN {$orders_table} p ON p.ID = b.wc_order_id
                  WHERE b.booking_date = %s
-                   AND (p.ID IS NULL OR p.status NOT IN ($placeholders))",
+                   AND (p.ID IS NULL OR p.status NOT IN ($placeholders)) AND {$not_cancelled}",
                 array_merge([$inputDate], $excluded_post_statuses)
             )
         );
@@ -333,7 +358,13 @@ class ServiceGetAvailableTimes
     private static function normalize_upper_time($time): string
     {
         $t = trim($time);
-        if ($t === '24:00' || $t === '24:00:00') return '23:59:59';
+        // As an upper bound, midnight means the end of the selected day.
+        // MySQL TIME columns return 00:00 as 00:00:00, while JSON-based area
+        // opening hours keep the shorter value.
+        if (in_array($t, ['00:00', '00:00:00', '24:00', '24:00:00'], true)) {
+            return '23:59:59';
+        }
+
         return $t;
     }
 
@@ -421,5 +452,14 @@ class ServiceGetAvailableTimes
         }
 
         return $filtered;
+    }
+
+    private static function cleanup_expired_checkout_holds(): void
+    {
+        try {
+            (new RepositoryBooking())->cleanup_expired_checkout_holds();
+        } catch (\Throwable $e) {
+            error_log('wesanox-booking: Abgelaufene Checkout-Holds konnten nicht bereinigt werden: ' . $e->getMessage());
+        }
     }
 }

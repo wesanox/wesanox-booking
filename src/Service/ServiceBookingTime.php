@@ -5,6 +5,7 @@ namespace Wesanox\Booking\Service;
 defined( 'ABSPATH' )|| exit;
 
 use DateTime;
+use Wesanox\Booking\Application\Booking\CalculateAvailableDurationsService;
 
 class ServiceBookingTime
 {
@@ -13,6 +14,7 @@ class ServiceBookingTime
     public $times_cutoffs;
 
     protected ServiceGetAvailableTimes $available_times;
+    protected CalculateAvailableDurationsService $duration_service;
 
     public function __construct()
     {
@@ -21,6 +23,9 @@ class ServiceBookingTime
         $this->times_cutoffs = [];
 
         $this->available_times = new ServiceGetAvailableTimes();
+        $this->duration_service = new CalculateAvailableDurationsService(
+            new ServiceGetAvailableRoomarts()
+        );
     }
 
     /**
@@ -87,31 +92,62 @@ class ServiceBookingTime
      *
      * @param string $selected_day The selected day in the format 'Y-m-d'.
      * @param string $start_date The start date in the format 'd.m.Y H:i'.
+     * @param int|null $area_id Specific area, or null for global/default availability.
      *
      * @return string The generated HTML code.
      */
-    public function getTimeSeparatet( $selected_day , $start_date ) :string
+    public function getTimeSeparatet( $selected_day , $start_date, ?int $area_id = null ) :string
     {
         $html = '';
+        $selectedTimestamp = strtotime((string) $selected_day);
+        if ($selectedTimestamp === false) {
+            return $this->renderUnavailableMessage('Ungültiges Datum.');
+        }
 
-        $times = $this->available_times->wesanox_get_available_times(date('Y-m-d' , strtotime($selected_day)));
+        $selectedYmd = date('Y-m-d' , $selectedTimestamp);
+
+        $times = $this->available_times->wesanox_get_available_times($selectedYmd, $area_id);
+
+        if (is_array($times) && isset($times['closed']) && (int) $times['closed'] === 1) {
+            return $this->renderUnavailableMessage('An diesem Tag geschlossen.');
+        }
+
+        if (empty($times)) {
+            return $this->renderUnavailableMessage('Keine freien Startzeiten gefunden.');
+        }
+
+        $opening = $this->available_times->get_opening_window($selectedYmd, $area_id);
+        $closingTime = $opening['opening_to'] ?? '24:00:00';
 
         foreach ($times as $time) {
+            if (!is_array($time)) {
+                continue;
+            }
+
             foreach ($time as $value) {
-                $timestamp = date('H:i', strtotime($selected_day . ' ' . $value));
+                $timestamp = date('H:i', strtotime($selectedYmd . ' ' . $value));
+
+                if (empty($this->duration_service->execute($selectedYmd, $timestamp, $closingTime))) {
+                    continue;
+                }
 
                 $active = ($timestamp == $start_date) ? ' active' : '';
 
                 $html .= '
                     <div class="col-6 bg-white p-1">
-                        <div class="text-center p-2 time-box' . $active . '" data-start-time="' . $timestamp . '">
-                            ' . $value . '
+                        <div class="text-center p-2 time-box' . $active . '" data-start-time="' . esc_attr($timestamp) . '">
+                            ' . esc_html($value) . '
                         </div>
                     </div>';
             }
         }
 
-        return $html;
+        return $html !== '' ? $html : $this->renderUnavailableMessage('Keine freien Startzeiten gefunden.');
+    }
+
+    private function renderUnavailableMessage(string $message): string
+    {
+        return '<div class="col-12 p-2 text-center text-muted">' . esc_html($message) . '</div>';
     }
 
     /**

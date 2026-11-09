@@ -133,12 +133,12 @@ class ElementBookingExtras
                             <h4 class="mb-3" data-swiper-parallax="-300" data-swiper-parallax-duration="600">Wähle Deine Extras</h4>
                             <div class="row px-2"> 
                                 ' . $html_product . ' 
-                               
+
                                 <div class="w-100 d-flex justify-content-end gap-2">
                                     <a href="#room-slide" class="btn btn-primary d-flex justify-content-between align-items-center back mt-3">
                                         <span><</span> Zurück 
                                     </a>
-                                    <a href="' .  esc_url(wc_get_cart_url()) . '" class="btn btn-primary d-flex justify-content-between align-items-center forward mt-3">
+                                    <a href="' .  esc_url(wc_get_cart_url()) . '" class="btn btn-primary d-flex justify-content-between align-items-center forward mt-3 booking-extras-continue">
                                         Weiter <span>></span>
                                     </a>
                                 </div>
@@ -197,6 +197,39 @@ class ElementBookingExtras
                     </div>';
             }
         }
+
+        $booking = WC()->session ? (array) WC()->session->get('booking', []) : [];
+        $specials_notice = isset($booking['specials_notice'])
+            ? (string) $booking['specials_notice']
+            : '';
+        $has_specials_notice = trim($specials_notice) !== '';
+        $has_specials_notice_id = 'booking-has-specials-notice-' . $product_id;
+        $specials_notice_id = 'booking-specials-notice-' . $product_id;
+        $specials_notice_fields_id = 'booking-specials-notice-fields-' . $product_id;
+
+        $html .= '
+            <div class="mt-4 booking-specials-notice-control">
+                <div class="form-check d-flex align-items-center gap-2 h5">
+                    <input id="' . esc_attr($has_specials_notice_id) . '"
+                           class="form-check-input booking-has-specials-notice"
+                           type="checkbox"
+                           aria-controls="' . esc_attr($specials_notice_fields_id) . '"
+                           aria-expanded="' . ($has_specials_notice ? 'true' : 'false') . '"' . checked($has_specials_notice, true, false) . '>
+                    <label class="form-check-label" for="' . esc_attr($has_specials_notice_id) . '">
+                        Ich habe Allergien oder Unverträglichkeiten
+                    </label>
+                </div>
+                <div id="' . esc_attr($specials_notice_fields_id) . '" class="mt-3 booking-specials-notice-field' . ($has_specials_notice ? '' : ' d-none') . '">
+                    <label for="' . esc_attr($specials_notice_id) . '" class="form-label mb-2">
+                        Welche Zutaten oder Produkte werden nicht vertragen?
+                    </label>
+                    <textarea id="' . esc_attr($specials_notice_id) . '"
+                              name="specials_notice"
+                              class="form-control booking-specials-notice"
+                              rows="4"
+                              placeholder="Zum Beispiel: Keine Ananas und keine Honigmelone">' . esc_textarea($specials_notice) . '</textarea>
+                </div>
+            </div>';
 
         $response = array(
             'message' => 'AJAX-Request erfolgreich abgefangen',

@@ -9,6 +9,7 @@ defined('ABSPATH') || exit;
 use Wesanox\Booking\Domain\Booking\Booking;
 use Wesanox\Booking\Domain\Booking\BookingRepositoryInterface;
 use Wesanox\Booking\Domain\Booking\BookingStatus;
+use Wesanox\Booking\Repository\RepositoryBooking;
 
 /**
  * WordPress / $wpdb implementation of BookingRepositoryInterface.
@@ -20,6 +21,8 @@ final class WordPressBookingRepository implements BookingRepositoryInterface
     public function findAll(?string $status = null): array
     {
         global $wpdb;
+
+        $this->cleanupExpiredCheckoutHolds();
 
         $bookings_table = $wpdb->prefix . 'wesanox_bookings';
         $rooms_table    = $wpdb->prefix . 'wesanox_rooms';
@@ -61,6 +64,8 @@ final class WordPressBookingRepository implements BookingRepositoryInterface
     public function findById(int $id): ?Booking
     {
         global $wpdb;
+
+        $this->cleanupExpiredCheckoutHolds();
 
         $bookings_table = $wpdb->prefix . 'wesanox_bookings';
         $rooms_table    = $wpdb->prefix . 'wesanox_rooms';
@@ -146,5 +151,14 @@ final class WordPressBookingRepository implements BookingRepositoryInterface
         }
 
         return trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name());
+    }
+
+    private function cleanupExpiredCheckoutHolds(): void
+    {
+        try {
+            (new RepositoryBooking())->cleanup_expired_checkout_holds();
+        } catch (\Throwable $e) {
+            error_log('wesanox-booking: Abgelaufene Checkout-Holds konnten nicht bereinigt werden: ' . $e->getMessage());
+        }
     }
 }

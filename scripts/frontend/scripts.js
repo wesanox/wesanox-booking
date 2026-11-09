@@ -14,8 +14,10 @@ const bookingStore = (() => {
         start_time: null,
         how_long: null,
         stop_time: null,
+        duration_minutes: null,
         product_id: null,
         extras: [],
+        specials_notice: '',
         area_id: 0,
     };
 
@@ -55,6 +57,175 @@ const bookingStore = (() => {
     function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
     return { load, set, get, onChange, reset };
+})();
+
+window.wesanoxBookingTime = (() => {
+    function normalizeTime(value) {
+        if (value === null || typeof value === 'undefined') return '';
+
+        const parts = String(value).trim().split(':');
+        if (parts.length < 2) return '';
+
+        const hours = parseInt(parts[0], 10);
+        const minutes = parseInt(parts[1], 10);
+
+        if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return '';
+        if (hours < 0 || hours > 24 || minutes < 0 || minutes > 59) return '';
+        if (hours === 24 && minutes !== 0) return '';
+
+        return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+    }
+
+    function toMinutes(value) {
+        const time = normalizeTime(value);
+        if (!time) return null;
+
+        const parts = time.split(':').map(Number);
+        return parts[0] * 60 + parts[1];
+    }
+
+    function durationMinutes(start, end) {
+        const startMinutes = toMinutes(start);
+        const endMinutes = toMinutes(end);
+
+        if (startMinutes === null || endMinutes === null) return null;
+
+        let diff = endMinutes - startMinutes;
+        if (diff < 0) diff += 24 * 60;
+
+        return diff > 0 ? diff : null;
+    }
+
+    function preferredDurationMinutes(state) {
+        if (!state) return null;
+
+        const stored = parseInt(state.duration_minutes, 10);
+        if (Number.isFinite(stored) && stored > 0) return stored;
+
+        const howLong = parseFloat(state.how_long);
+        if (Number.isFinite(howLong) && howLong > 0) {
+            return Math.round(howLong * 60);
+        }
+
+        return durationMinutes(state.start_time, state.stop_time);
+    }
+
+    function stateForTimes(start, end) {
+        const stopTime = normalizeTime(end);
+        const minutes = durationMinutes(start, stopTime);
+
+        if (!stopTime || minutes === null) {
+            return {
+                stop_time: null,
+                duration_minutes: null,
+                how_long: null,
+            };
+        }
+
+        return {
+            stop_time: stopTime,
+            duration_minutes: minutes,
+            how_long: minutes / 60,
+        };
+    }
+
+    function applyDurationSelection(select, start, preferredMinutes) {
+        const $select = jQuery(select);
+        if (!$select.length) return null;
+
+        const startTime = normalizeTime(start);
+        if (!startTime) return null;
+
+        const preferred = parseInt(preferredMinutes, 10);
+        let fallback = null;
+        let selectedOption = null;
+        let smallerOrEqual = null;
+        let exact = null;
+
+        $select.find('option').each(function () {
+            const value = normalizeTime(jQuery(this).val());
+            const minutes = durationMinutes(startTime, value);
+
+            if (!value || minutes === null) return;
+
+            const option = {
+                value: value,
+                minutes: minutes,
+            };
+
+            if (fallback === null) {
+                fallback = option;
+            }
+
+            if (jQuery(this).is(':selected')) {
+                selectedOption = option;
+            }
+
+            if (Number.isFinite(preferred) && preferred > 0) {
+                if (minutes === preferred) {
+                    exact = option;
+                    return false;
+                }
+
+                if (minutes < preferred || minutes === preferred) {
+                    smallerOrEqual = option;
+                }
+            }
+        });
+
+        const selected = exact || smallerOrEqual || selectedOption || fallback;
+        if (!selected) return null;
+
+        $select.val(selected.value);
+        return stateForTimes(startTime, selected.value);
+    }
+
+    function hoursLabel(minutes) {
+        const parsed = parseInt(minutes, 10);
+        if (!Number.isFinite(parsed) || parsed <= 0) return '';
+
+        const hours = parsed / 60;
+        return hours + ' Stunden';
+    }
+
+    function dateLabel(value) {
+        if (!value) return '';
+
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? '' : value.toLocaleDateString('de-DE');
+        }
+
+        const raw = String(value).trim();
+        const ymd = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+        if (ymd) {
+            return ymd[3] + '.' + ymd[2] + '.' + ymd[1];
+        }
+
+        const date = new Date(raw);
+        return Number.isNaN(date.getTime()) ? raw : date.toLocaleDateString('de-DE');
+    }
+
+    function bookingRangeLabel(day, start, end) {
+        const date = dateLabel(day);
+        const startTime = normalizeTime(start);
+        const endTime = normalizeTime(end);
+        const timeRange = startTime && endTime
+            ? startTime + ' - ' + endTime
+            : startTime || '';
+
+        return [date, timeRange].filter(Boolean).join(' ');
+    }
+
+    return {
+        normalizeTime,
+        durationMinutes,
+        preferredDurationMinutes,
+        stateForTimes,
+        applyDurationSelection,
+        hoursLabel,
+        bookingRangeLabel,
+    };
 })();
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -272,6 +443,17 @@ function checkedSvgNav(id_name, class_name, span_text) {
     jQuery(id_name + ' .checked').removeClass('d-none').addClass('d-flex');
     jQuery(id_name + ' .not-checked').removeClass('d-flex').addClass('d-none');
     jQuery(id_name + ' ' + class_name).html(span_text);
+}
+
+function updateBookingRangeNav() {
+    if (!window.wesanoxBookingTime || typeof bookingStore === 'undefined') return;
+
+    const state = bookingStore.get();
+    const label = window.wesanoxBookingTime.bookingRangeLabel(state.day, state.start_time, state.stop_time);
+
+    if (!label) return;
+
+    checkedSvgNav('#check-in-out', '.day', label);
 }
 
 /**

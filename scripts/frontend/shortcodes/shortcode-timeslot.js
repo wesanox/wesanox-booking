@@ -21,6 +21,7 @@
             start_time:   '',
             stop_time:    '',
             how_long:     0,
+            duration_minutes: null,
             product_id:   '',
         };
 
@@ -59,6 +60,11 @@
         }
 
         function getHourDiff(start, end) {
+            if (window.wesanoxBookingTime) {
+                var minutes = window.wesanoxBookingTime.durationMinutes(start, end);
+                return minutes ? minutes / 60 : 0;
+            }
+
             if (!start || !end) return 0;
             var sh = parseInt(start.split(':')[0], 10), sm = parseInt(start.split(':')[1], 10);
             var eh = parseInt(end.split(':')[0], 10),   em = parseInt(end.split(':')[1], 10);
@@ -67,10 +73,59 @@
             return diff / 60;
         }
 
+        function getPreferredDurationMinutes() {
+            if (window.wesanoxBookingTime) {
+                return window.wesanoxBookingTime.preferredDurationMinutes(state);
+            }
+
+            if (state.duration_minutes) {
+                return parseInt(state.duration_minutes, 10);
+            }
+
+            if (state.how_long) {
+                return Math.round(parseFloat(state.how_long) * 60);
+            }
+
+            return Math.round(getHourDiff(state.start_time, state.stop_time) * 60) || null;
+        }
+
+        function applyDurationSelection(preferredMinutes) {
+            var $select = $root.find('.wsn-duration-wrap select');
+            var durationState = window.wesanoxBookingTime
+                ? window.wesanoxBookingTime.applyDurationSelection($select, state.start_time, preferredMinutes)
+                : null;
+
+            if (!durationState) {
+                var fallbackStop = $select.val() || '';
+                durationState = window.wesanoxBookingTime
+                    ? window.wesanoxBookingTime.stateForTimes(state.start_time, fallbackStop)
+                    : {
+                        stop_time: fallbackStop,
+                        duration_minutes: Math.round(getHourDiff(state.start_time, fallbackStop) * 60) || null,
+                        how_long: getHourDiff(state.start_time, fallbackStop),
+                    };
+            }
+
+            state.stop_time = durationState.stop_time || '';
+            state.duration_minutes = durationState.duration_minutes || null;
+            state.how_long = durationState.how_long || 0;
+        }
+
+        function clearDependentSelection() {
+            state.product_id = '';
+        }
+
         function escAttr(str) {
             return String(str)
                 .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
                 .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
         }
 
         function syncStore() {
@@ -81,6 +136,7 @@
                     start_time:   state.start_time,
                     stop_time:    state.stop_time,
                     how_long:     state.how_long,
+                    duration_minutes: state.duration_minutes,
                     product_id:   state.product_id,
                     area_id:      areaId,
                 });
@@ -101,9 +157,15 @@
 
             if (!day) { showErrors(['Bitte wähle ein Datum.']); return; }
 
+            var preferredMinutes = getPreferredDurationMinutes();
+
             state.day          = day;
             state.person_count = persons;
+            state.duration_minutes = preferredMinutes;
             state.start_time   = '';
+            state.stop_time    = '';
+            state.how_long     = preferredMinutes ? preferredMinutes / 60 : 0;
+            clearDependentSelection();
             showErrors([]);
             loading(true);
 
@@ -135,9 +197,13 @@
 
         $root.on('click', '.wsn-time-slots .time-box', function () {
             var startTime = $(this).data('start-time') || $(this).text().trim();
+            var preferredMinutes = getPreferredDurationMinutes();
             $root.find('.wsn-time-slots .time-box').removeClass('active');
             $(this).addClass('active');
             state.start_time = startTime;
+            state.stop_time = '';
+            state.duration_minutes = preferredMinutes;
+            clearDependentSelection();
 
             loading(true);
             $.ajax({
@@ -147,9 +213,39 @@
                 data:     { action: 'element_booking_duration', start_time: startTime, day: state.day, area_id: areaId },
             }).done(function (res) {
                 loading(false);
-                var html = (res && res.html) ? res.html : '';
+                var html = '';
+                if (res && res.success && res.data && typeof res.data.html !== 'undefined') {
+                    html = res.data.html;
+                } else if (res && typeof res.html !== 'undefined') {
+                    html = res.html;
+                } else {
+                    html = '<p class="text-muted p-2">Für diese Startzeit ist kein buchbarer Timeslot mehr frei.</p>';
+                }
+
                 $root.find('.wsn-duration-wrap').html(html);
-                state.stop_time = $root.find('.wsn-duration-wrap select').val() || '';
+
+                var available = true;
+                if (res && res.success === false) {
+                    available = false;
+                }
+                if (res && res.data && res.data.available === false) {
+                    available = false;
+                }
+                if (res && res.available === false) {
+                    available = false;
+                }
+
+                var $select = $root.find('.wsn-duration-wrap select');
+                if (!available || !$select.length || !$select.find('option').length) {
+                    state.stop_time = '';
+                    state.duration_minutes = null;
+                    state.how_long = 0;
+                    clearDependentSelection();
+                    showErrors(['Für diese Startzeit ist kein buchbarer Timeslot mehr frei.']);
+                    return;
+                }
+
+                applyDurationSelection(preferredMinutes);
                 showPanel(3);
             }).fail(function () {
                 loading(false);
@@ -164,18 +260,29 @@
         // ── step 3: duration change ───────────────────────────────────────────
 
         $root.on('change', '.wsn-duration-wrap select', function () {
-            state.stop_time = $(this).val();
+            var durationState = window.wesanoxBookingTime
+                ? window.wesanoxBookingTime.stateForTimes(state.start_time, $(this).val())
+                : {
+                    stop_time: $(this).val(),
+                    duration_minutes: Math.round(getHourDiff(state.start_time, $(this).val()) * 60) || null,
+                    how_long: getHourDiff(state.start_time, $(this).val()),
+                };
+
+            state.stop_time = durationState.stop_time || '';
+            state.duration_minutes = durationState.duration_minutes || null;
+            state.how_long = durationState.how_long || 0;
+            clearDependentSelection();
         });
 
         // ── step 3 → 4: load items ────────────────────────────────────────────
 
         $root.on('click', '.wsn-to-step-4', function () {
             if (!state.stop_time) {
-                state.stop_time = $root.find('.wsn-duration-wrap select').val() || '';
+                applyDurationSelection(getPreferredDurationMinutes());
             }
             if (!state.stop_time) { showErrors(['Bitte wähle eine Dauer.']); return; }
 
-            state.how_long = getHourDiff(state.start_time, state.stop_time);
+            state.how_long = state.duration_minutes ? state.duration_minutes / 60 : getHourDiff(state.start_time, state.stop_time);
             syncStore();
             showErrors([]);
             loading(true);
@@ -193,6 +300,13 @@
                 },
             }).done(function (res) {
                 loading(false);
+                if (res && res.success === false) {
+                    var message = res.data && res.data.message
+                        ? res.data.message
+                        : 'Für diese Auswahl ist kein buchbarer Timeslot verfügbar.';
+                    showErrors([message]);
+                    return;
+                }
                 renderItems(res, 'p.P./Std.');
                 showPanel(4);
             }).fail(function () {
@@ -221,13 +335,72 @@
 
         $root.on('click', '.wsn-panel[data-panel="4"] .wsn-back', function () { showPanel(3); });
 
+        $root.on('click', '.wsn-next-slot', function () {
+            state.day = String($(this).data('day') || '');
+            state.start_time = String($(this).data('start') || '');
+            state.stop_time = String($(this).data('stop') || '');
+            state.duration_minutes = window.wesanoxBookingTime
+                ? window.wesanoxBookingTime.durationMinutes(state.start_time, state.stop_time)
+                : Math.round(getHourDiff(state.start_time, state.stop_time) * 60);
+            state.how_long = state.duration_minutes ? state.duration_minutes / 60 : getHourDiff(state.start_time, state.stop_time);
+            syncStore();
+
+            showErrors([]);
+            loading(true);
+
+            $.ajax({
+                url:      ajaxUrl,
+                method:   'POST',
+                dataType: 'json',
+                data: {
+                    action:     'element_booking_item',
+                    start_time: state.start_time,
+                    stop_time:  state.stop_time,
+                    day:        state.day,
+                    area_id:    areaId,
+                },
+            }).done(function (res) {
+                loading(false);
+                renderItems(res, 'p.P./Std.');
+            }).fail(function () {
+                loading(false);
+                showErrors(['Fehler beim Laden der Räume.']);
+            });
+        });
+
         // ── render product cards ──────────────────────────────────────────────
+
+        function renderNextSlots(slots, currentDay) {
+            if (!slots || !slots.length) {
+                return '<p class="text-muted small mb-0 mt-2">Aktuell ist kein nächster freier Slot verfügbar.</p>';
+            }
+
+            var html = '<div class="wsn-next-slots mt-3">'
+                + '<div class="text-muted small mb-2">Nächste verfügbare Zeiten:</div>';
+
+            html += slots.map(function (slot) {
+                var label = escHtml(slot.start + ' - ' + slot.stop);
+                if (slot.date !== currentDay) {
+                    label += '<br><small>' + escHtml(slot.date) + '</small>';
+                }
+
+                return '<button type="button" class="btn btn-outline-primary btn-sm w-100 mb-2 wsn-next-slot"'
+                    + ' data-day="' + escAttr(slot.date) + '"'
+                    + ' data-start="' + escAttr(slot.start) + '"'
+                    + ' data-stop="' + escAttr(slot.stop) + '">'
+                    + label
+                    + '</button>';
+            }).join('');
+
+            return html + '</div>';
+        }
 
         function renderItems(res, unit) {
             var cards = [
-                { n: 1, price: res.variation_price_one, varId: res.variation_id_one, available: res.available_one },
-                { n: 2, price: res.variation_price_two, varId: res.variation_id_two, available: res.available_two },
+                { n: 1, price: res.variation_price_one, varId: res.variation_id_one, available: res.available_one, next: res.next_available_one },
+                { n: 2, price: res.variation_price_two, varId: res.variation_id_two, available: res.available_two, next: res.next_available_two },
             ];
+            var currentDay = res.start ? String(res.start).substring(0, 10) : state.day;
             var html = cards.map(function (c) {
                 var priceHtml = c.price
                     ? '<div class="wsn-item-card__price"><strong>' + c.price + ' €</strong>' +
@@ -236,7 +409,8 @@
                     : '';
                 var btnHtml = c.available
                     ? '<button class="btn btn-primary wsn-book-btn w-100 mt-3" data-product-id="' + escAttr(String(c.varId)) + '">Buchen</button>'
-                    : '<button class="btn btn-primary wsn-book-btn w-100 mt-3" disabled>Ausgebucht</button>';
+                    : '<button class="btn btn-primary wsn-book-btn w-100 mt-3" disabled>Ausgebucht</button>'
+                        + renderNextSlots(c.next, currentDay);
                 return '<div class="wsn-item-card bg-white p-3">' +
                     '<h5 class="text-blue text-uppercase">Suite ' + c.n + '</h5>' +
                     '<hr class="my-2">' +
@@ -274,6 +448,7 @@
                         start_time:   state.start_time,
                         stop_time:    state.stop_time,
                         how_long:     state.how_long,
+                        duration_minutes: state.duration_minutes,
                     },
                 }).done(function (res) {
                     loading(false);
