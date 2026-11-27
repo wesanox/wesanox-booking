@@ -1,3 +1,12 @@
+## 2026-11-27
+
+* **Freitagsbuchungen über 16:00 wurden zu teuer berechnet:** Seit die Freitag-Nachmittag-Tarife am 17.11.2026 angelegt wurden (Variationen 253 und 256), bekam der Nachmittagstarif im Warenkorb die gesamte Buchungsdauer, der Vormittagstarif kam zusätzlich dazu. Beispiel Freitag 13:45–17:45, 2 Personen Premium: 4,5 h Vormittag und 8 h Nachmittag statt 4,5 h und 3,5 h. Der Warenkorb erkannte Vormittag und Nachmittag an festen Variations-IDs (251/254 und 252/255); jede andere ID bekam die volle Dauer.
+* Die Menge richtet sich jetzt nach dem Segment: ein Tarif gilt für die ganze Buchung, bei zwei Tarifen der erste für die Stunden vor 16:00 und der zweite für die Stunden ab 16:00. Neue Tarife brauchen keine Codeänderung mehr.
+* Mo–Do und Buchungen mit nur einem Tarif rechnen unverändert. Mehr als zwei Tarife in einer Anfrage werden abgelehnt.
+* Betroffene Dateien: `src/Domain/Cart/TariffQuantityAllocator.php` (neu), `src/Woocommerce/WoocommerceProductHandler.php`, `tests/Unit/Domain/Cart/TariffQuantityAllocatorTest.php`
+* **Anzeige in Warenkorb und Kasse:** Die Zeile des Freitag-Nachmittag-Tarifs zeigte weiter „… Personen je 4 Stunden“ (gesamte Dauer) und wiederholte den Suite-Kopf, weil auch die Templates den Tarif an festen Variations-IDs erkannten. Sie richten sich jetzt nach der Position der Tarifzeile und zeigen die Stunden ab 16:00 (im Beispiel 1:45). Gemeinsam mit dem Plugin ausrollen.
+* Betroffene Dateien im Child-Theme `hello-elementor-child`: `woocommerce/cart/cart.php`, `woocommerce/checkout/review-order.php`
+
 ## 2026-11-16
 
 * **Späte Buchungen blockieren die Suite im Kalender (AEA-93, AEA-33):** Buchungen, die nach 23:30 enden (23:45, 23:59, 24:00), blockierten ihre Suite im Kalender gar nicht. Durch den 30-Minuten-Puffer sprang das Ende auf „00:xx“, der gesperrte Zeitraum war leer. Ausgebuchte Freitage und Samstage standen deshalb auf „Hohes Aufkommen“, obwohl der Startzeiten-Schritt keine Zeit mehr anbot. Das Ende wird jetzt auf die Schließzeit begrenzt.

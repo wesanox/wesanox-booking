@@ -12,6 +12,7 @@ use Wesanox\Booking\Domain\Booking\CheckoutAvailabilityDecision;
 use Wesanox\Booking\Domain\Booking\DuplicateGuestDetector;
 use Wesanox\Booking\Domain\Booking\SpecialsCustomerNotice;
 use Wesanox\Booking\Domain\Cart\BookingCartPolicy;
+use Wesanox\Booking\Domain\Cart\TariffQuantityAllocator;
 use Wesanox\Booking\Service\ServiceBookingTime;
 use Wesanox\Booking\Service\ServiceGetAvailableRoomarts;
 use Wesanox\Booking\Service\ServiceGetAvailableTimes;
@@ -25,6 +26,7 @@ class WoocommerceProductHandler
     protected RepositoryBooking $repository_booking;
     protected HandlerBooking $handler_booking;
     private BookingCartPolicy $booking_cart_policy;
+    private TariffQuantityAllocator $tariff_quantity_allocator;
     /** @var int[]|null */
     private ?array $configured_rate_product_ids = null;
     private bool $checkout_checkboxes_rendered = false;
@@ -38,6 +40,7 @@ class WoocommerceProductHandler
         $this->repository_booking = new RepositoryBooking();
         $this->handler_booking = new HandlerBooking();
         $this->booking_cart_policy = new BookingCartPolicy();
+        $this->tariff_quantity_allocator = new TariffQuantityAllocator();
 
         /**
          * Represents the current object instance in the context of a class.
@@ -314,31 +317,26 @@ class WoocommerceProductHandler
             $ntm  = (float) ($diff->ntmf ?? 0);
         }
 
-        $hours_vm  = $vh + $vtm;
-        $hours_nm  = $nh + $ntm;
-        $hours_all = $hours_vm + $hours_nm;
+        $hours_vm = $vh + $vtm;
+        $hours_nm = $nh + $ntm;
 
-        if ( $hours_all <= 0 && $duration > 0 ) {
-            $hours_vm = 0;
-            $hours_nm = 0;
-            $hours_all = (float) $duration;
-        }
+        // One tariff covers the whole booking; two are [before 16:00, from 16:00] as built by
+        // ElementBookingItem. The segment decides the quantity, not the variation ID.
+        $tariff_lines = $this->tariff_quantity_allocator->allocate(
+            $product_ids,
+            $person,
+            $hours_vm,
+            $hours_nm,
+            (float) $duration
+        );
 
         $cart->empty_cart();
 
         $added = [];
-        $single_product_booking = count($product_ids) === 1;
 
-        foreach ($product_ids as $pid) {
-            if ( $single_product_booking ) {
-                $quantity = $person * $hours_all;
-            } elseif ( in_array($pid, [251, 254], true) ) {
-                $quantity = $person * $hours_vm;
-            } elseif ( in_array($pid, [252, 255], true) ) {
-                $quantity = $person * $hours_nm;
-            } else {
-                $quantity = $person * $hours_all;
-            }
+        foreach ($tariff_lines as $tariff_line) {
+            $pid      = $tariff_line['product_id'];
+            $quantity = $tariff_line['quantity'];
 
             // Wenn $pid eine VARIATION ist:
             // $parent_id = wp_get_post_parent_id($pid) ?: 0;
