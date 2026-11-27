@@ -257,7 +257,6 @@ class ServiceGetAvailableTimes
 
         self::cleanup_expired_checkout_holds();
 
-        $tz             = wp_timezone();
         $rooms_table    = $wpdb->prefix . 'wesanox_rooms';
         $items_table    = $wpdb->prefix . 'wesanox_items';
         $bookings_table = $wpdb->prefix . 'wesanox_bookings';
@@ -317,21 +316,9 @@ class ServiceGetAvailableTimes
             foreach ($bookings as $b) {
                 if ((int)$b->room_id !== (int)$room->id) continue;
 
-                $startDT   = new DateTime($b->booking_from, $tz);
-                $closingTS = strtotime($openingToNorm);
+                [$blockedFrom, $blockedTo] = self::blocked_range($b->booking_from, $b->booking_to, $openingToNorm);
 
-                $adjustedStartTime = $startDT->modify('-30 minutes')->format('H:i:s');
-
-                $tmpEnd = new DateTime($b->booking_to, $tz);
-                if (strtotime($tmpEnd->format('H:i:s')) < $closingTS) {
-                    $tmpEnd->modify('+30 minutes');
-                }
-                $endOnly = $tmpEnd->format('H:i:s');
-                if (strtotime($endOnly) > $closingTS || $endOnly === '00:00:00') {
-                    $endOnly = $openingToNorm;
-                }
-
-                $times = self::removeBookedTimes($times, $adjustedStartTime, $endOnly);
+                $times = self::removeBookedTimes($times, $blockedFrom, $blockedTo);
             }
 
             $availableTimes[$room->id] = self::filterTimeSlots($times, $minSlots, $openingToNorm);
@@ -353,6 +340,28 @@ class ServiceGetAvailableTimes
             return [$firstRoomId => $unionTimes];
         }
         return [];
+    }
+
+    /**
+     * Time range a booking blocks on its room, including the 30-minute buffer on both sides.
+     *
+     * The end is capped at closing time. Without the cap, a booking ending after 23:30
+     * (23:45, 23:59, 24:00) wrapped to "00:xx" after adding the buffer, so it blocked
+     * no slot at all and the calendar never showed the day as fully booked (AEA-93).
+     *
+     * @return array{0: string, 1: string} [from H:i:s, to H:i:s]
+     */
+    private static function blocked_range(string $bookingFrom, string $bookingTo, string $openingToNorm): array
+    {
+        $buffer    = 30 * 60;
+        $closingTs = strtotime($openingToNorm);
+
+        $from = date('H:i:s', strtotime($bookingFrom) - $buffer);
+
+        $endTs = strtotime(self::normalize_upper_time($bookingTo)) + $buffer;
+        $to    = $endTs >= $closingTs ? $openingToNorm : date('H:i:s', $endTs);
+
+        return [$from, $to];
     }
 
     private static function normalize_upper_time($time): string

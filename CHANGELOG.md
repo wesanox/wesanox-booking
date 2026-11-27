@@ -1,3 +1,10 @@
+## 2026-11-16
+
+* **Späte Buchungen blockieren die Suite im Kalender (AEA-93, AEA-33):** Buchungen, die nach 23:30 enden (23:45, 23:59, 24:00), blockierten ihre Suite im Kalender gar nicht. Durch den 30-Minuten-Puffer sprang das Ende auf „00:xx“, der gesperrte Zeitraum war leer. Ausgebuchte Freitage und Samstage standen deshalb auf „Hohes Aufkommen“, obwohl der Startzeiten-Schritt keine Zeit mehr anbot. Das Ende wird jetzt auf die Schließzeit begrenzt.
+* Startzeiten, Dauer und Checkout waren nicht betroffen (SQL-Prüfung rechnet korrekt).
+* Betroffene Dateien: `src/Service/ServiceGetAvailableTimes.php`, `tests/Unit/Service/LateBookingsBlockCalendarTest.php`
+* Nachgestellt mit Produktivdaten-Backup vom 26.10.2026: 10.10. und 24.10.2026 wurden vorher als „Hohes Aufkommen“ angezeigt, jetzt als „Ausgebucht“.
+
 ## 2026-11-02
 
 * **Stornierte Buchungen geben den Raum frei:** Buchungen mit `booking_status = 3` (im Backend storniert) blockieren keinen Raum mehr – auch wenn die WooCommerce-Bestellung noch offen ist oder die Buchung gar keine Bestellung hat (z. B. stornierte Testbuchungen). Bisher entschied nur der Bestellstatus. Buchungen ohne Status (Checkout-Holds, Altdaten) blockieren weiterhin.
