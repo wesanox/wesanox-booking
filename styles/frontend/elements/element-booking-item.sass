@@ -9,3 +9,14 @@
       align-items: center
       justify-content: flex-start
       overflow-y: auto
+
+      // Link buttons (e.g. "Anderes Datum auswählen") would otherwise take the dark link colour of
+      // ".woocommerce a" and vanish on the dark background.
+      a.btn
+        color: white
+        text-decoration: none
+
+        &:hover,
+        &:focus-visible,
+        &:active
+          color: var(--bs-btn-hover-color)

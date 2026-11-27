@@ -182,6 +182,13 @@
   justify-content: flex-start;
   overflow-y: auto;
 }
+#wesanox-booking #variation_message_1 a.btn, #wesanox-booking #variation_message_2 a.btn {
+  color: white;
+  text-decoration: none;
+}
+#wesanox-booking #variation_message_1 a.btn:hover, #wesanox-booking #variation_message_1 a.btn:focus-visible, #wesanox-booking #variation_message_1 a.btn:active, #wesanox-booking #variation_message_2 a.btn:hover, #wesanox-booking #variation_message_2 a.btn:focus-visible, #wesanox-booking #variation_message_2 a.btn:active {
+  color: var(--bs-btn-hover-color);
+}
 
 /** ---- Button Style ---- **/
 .btn-primary {

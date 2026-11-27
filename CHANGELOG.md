@@ -1,5 +1,8 @@
 ## 2026-11-27
 
+* **Button „Anderes Datum auswählen“ war unsichtbar (AEA-126):** Im „Ausgebucht“-Feld der Suite-Auswahl stand der Button-Text dunkelblau auf dunkelblauem Grund, sichtbar war nur der Rahmen. Der Button ist ein Link und bekam die allgemeine Linkfarbe (`.woocommerce a` bzw. die Elementor-Linkfarbe) statt der Button-Farbe. Im „Ausgebucht“-Feld ist die Schrift von Link-Buttons jetzt weiß und nicht mehr unterstrichen; beim Überfahren gilt die Button-Farbe von Bootstrap.
+* Betroffene Dateien: `styles/frontend/elements/element-booking-item.sass`, `styles/frontend/styles.css`. Die CSS-Datei ist von Hand ergänzt, nicht neu kompiliert, weil sie den Block „Multi-Step Booking Widgets“ enthält, der in den Sass-Quellen fehlt.
+
 * **Freitagsbuchungen über 16:00 wurden zu teuer berechnet:** Seit die Freitag-Nachmittag-Tarife am 17.11.2026 angelegt wurden (Variationen 253 und 256), bekam der Nachmittagstarif im Warenkorb die gesamte Buchungsdauer, der Vormittagstarif kam zusätzlich dazu. Beispiel Freitag 13:45–17:45, 2 Personen Premium: 4,5 h Vormittag und 8 h Nachmittag statt 4,5 h und 3,5 h. Der Warenkorb erkannte Vormittag und Nachmittag an festen Variations-IDs (251/254 und 252/255); jede andere ID bekam die volle Dauer.
 * Die Menge richtet sich jetzt nach dem Segment: ein Tarif gilt für die ganze Buchung, bei zwei Tarifen der erste für die Stunden vor 16:00 und der zweite für die Stunden ab 16:00. Neue Tarife brauchen keine Codeänderung mehr.
 * Mo–Do und Buchungen mit nur einem Tarif rechnen unverändert. Mehr als zwei Tarife in einer Anfrage werden abgelehnt.
